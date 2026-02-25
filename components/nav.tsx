@@ -24,15 +24,6 @@ export default function HomepageNav() {
           <MobileNavMenu />
         </div>
 
-        <div className="absolute left-1/2 -translate-x-1/2 transform hidden lg:flex gap-1">
-          <Link href="https://clearsure.co" target="_blank" rel="noopener noreferrer">
-            <Button size="nav" variant="secondary" className="gap-1 font-mono">
-              <DashboardIcon className="h-[8px] w-[10px]" />
-              Clearsure<sup className="ml-[-3px] text-[8px] leading-none relative top-[-2px]">1</sup>
-            </Button>
-          </Link>
-        </div>
-
         <div className="shrink-0">
           <Link href="/about">
             <Button size="nav" variant="secondary" className="gap-1 font-mono">

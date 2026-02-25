@@ -39,17 +39,11 @@ export default function MobileNavMenu() {
             />
           </div>
         </DropdownMenuTrigger>
-        <DropdownMenuContent 
+        <DropdownMenuContent
           className="min-w-40"
           align="start"
           sideOffset={8}
         >
-        <Link href="https://clearsure.co" target="_blank" rel="noopener noreferrer">
-          <DropdownMenuItem className="font-mono justify-start">
-            <DashboardIcon className="h-3 w-3 mr-2" />
-            <span>Clearsure<sup className="ml-[1px] text-[8px] leading-none align-[0.1em]">1</sup></span>
-          </DropdownMenuItem>
-        </Link>
       </DropdownMenuContent>
     </DropdownMenu>
     </div>
