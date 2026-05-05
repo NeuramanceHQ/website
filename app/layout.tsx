@@ -1,4 +1,3 @@
-import UserStatus from '@/components/dev/user-status';
 import { ErrorBoundary } from '@/components/error-boundary';
 import { AudioProvider } from '@/lib/contexts/AudioContext';
 import { cn } from '@/lib/utils';
@@ -141,7 +140,6 @@ export default function Layout({ children }: { children: React.ReactNode }) {
             >
               {children}
             </ErrorBoundary>
-            {process.env.DEV_TOOLS === '1' && <UserStatus />}
           </AudioProvider>
         </ErrorBoundary>
       </body>

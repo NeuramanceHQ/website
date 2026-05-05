@@ -1,12 +1,8 @@
 import Link from 'next/link';
 import Image from 'next/image';
-import AccountBlock from './account-block';
-import HomeNavMenu from './home-nav-menu';
 import MobileNavMenu from './mobile-nav-menu';
-import GlitchWordmark from './ui/glitch-wordmark';
 import { Button } from './ui/button';
-import { LogIn, Circle, Terminal } from 'lucide-react';
-import { DashboardIcon, ReaderIcon } from '@radix-ui/react-icons';
+import { Terminal } from 'lucide-react';
 
 
 

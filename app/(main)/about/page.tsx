@@ -50,25 +50,27 @@ export default function Page() {
               <br></br>
               <br></br>
               <span className="block text-xs leading-relaxed md:leading-normal">
-                Many problems in the world have been solved. <br></br>The
-                baseline quality of life that humanity has achieved, through
-                hard work & pain, is now fantastic.
+                The future is already running. It arrived through the back of
+                the network, compiled itself in the small hours, & is now busy
+                rewriting the substrate of everyday life from inside the
+                machine.
                 <br></br>
-                <br></br>Many of the remaining highest-ROI things one could work on are now in the
-                realm of refining experiences that people often overlook.
+                <br></br>We work at the seam where cybernetics overtakes
+                culture — where intelligence ceases to be a tool & begins to
+                behave as terrain. Each interface is a frontier. Each protocol,
+                a treaty with something larger than us. The corporation, in
+                this register, is no longer an organization but a probe: an
+                instrument tuned to a signal arriving from further down the
+                timeline.
                 <br></br>
-                <br></br>Herein lies an opportunity for designers, builders, &
-                engineers to reimagine forgotton monotonies of everyday life,
-                pernicious papercuts of the soul carelessly devoid of any beauty
-                or taste that millions of people sleepwalk into experiencing
-                constantly, & unexpectedly gift them a bit of happiness,
-                elucidation, & enrichment, no matter how small.
+                <br></br>Most software is haunted — by legacy, by neglect, by
+                the residue of decisions no one remembers making. We design
+                systems that exorcise this residue & route the user instead
+                through clarity, velocity, & a kind of quiet awe. Cyberspace
+                was promised as a consensual hallucination. We intend to make
+                it worth consenting to.
                 <br></br>
-                <br></br>Neuramance® is an attempt, specializing in the digital
-                world, at reinvigorating beauty & delight back into common human
-                experiences.
-                <br></br>We design our own softwre products, & also consult &
-                work with others pursuing excellence.
+                <br></br>We meet the future on its own terms.
               </span>
             </h1>
             <div
