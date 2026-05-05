@@ -35,9 +35,6 @@ export const Hero = React.memo(() => {
                 Software From the Future.
               </div>
             </div>
-            <h1 className="ss-disambiguation bg-gradient-to-r from-white to-gray-400 bg-clip-text font-mono text-xs tracking-tight text-transparent sm:text-xs sm:leading-tight xl:text-xs/none xl:leading-tight">
-              Holding Co. & Consultancy.
-            </h1>
             <div className="flex flex-col items-center">
               <div className="flex flex-col items-center">
                 <Icons.faceLevel style={{ width: 95, height: 'auto' }} />
