@@ -14,7 +14,7 @@ import { useGlitch } from 'react-powerglitch';
 const GlitchWordmark = React.memo(() => {
   const companyNames = useMemo(
     () => [
-      { text: 'NEURAMANCE® CYBERSYSTEMS CORPORATION', cycles: 5 },
+      { text: 'NEURAMANCE® CYBERSYSTEMS CORPORATION', cycles: 2 },
       { text: '神念赛博系统公司', cycles: 1 },
       { text: '神念サイバーシステム株式会社', cycles: 1 },
       { text: 'न्यूरामैन्स साइबरसिस्टम्स कॉर्पोरेशन', cycles: 1 },

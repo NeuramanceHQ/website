@@ -69,8 +69,6 @@ export default function Page() {
                 through clarity, velocity, & a kind of quiet awe. Cyberspace
                 was promised as a consensual hallucination. We intend to make
                 it worth consenting to.
-                <br></br>
-                <br></br>We meet the future on its own terms.
               </span>
             </h1>
             <div
@@ -85,13 +83,13 @@ export default function Page() {
                 <div className="flex items-center space-x-2">
                   <Terminal className="h-3 w-3" />
                   <span className="ss-disambiguation bg-gradient-to-r from-white to-gray-100 bg-clip-text font-mono text-xs tracking-tight text-transparent sm:text-xs sm:leading-tight xl:text-xs/none xl:leading-tight">
-                    Software from the future,
+                    Software from the future. On its own terms.
                   </span>
                 </div>
                 <div className="mt-1 flex items-center space-x-2">
                   <div className="h-3 w-3" />
                   <span className="ss-disambiguation bg-gradient-to-r from-white to-gray-100 bg-clip-text font-mono text-xs tracking-tight text-transparent sm:text-xs sm:leading-tight xl:text-xs/none xl:leading-tight">
-                    Austin, Neuramance® founder
+                    Austin, Neuramance®
                   </span>
                 </div>
               </div>
