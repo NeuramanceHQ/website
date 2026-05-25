@@ -10,21 +10,10 @@ export default function Page() {
 
   const handleQuoteClick = () => {
     try {
-      playOverlayTrack('/audio/about-quote.mp3', 'about-quote', 'About Quote');
+      playOverlayTrack('/audio/dune2-intro.mp3', 'dune2-quote', 'Dune 2 Quote');
     } catch (error) {
       logWarning(
-        'About quote audio file not found. Please add about-quote.mp3 to /public/audio/',
-        'AboutPage',
-      );
-    }
-  };
-
-  const handleInfoClick = () => {
-    try {
-      playOverlayTrack('/audio/info-sound.mp3', 'info-sound', 'Info Sound');
-    } catch (error) {
-      logWarning(
-        'Info sound audio file not found. Please add info-sound.mp3 to /public/audio/',
+        'Dune 2 audio file not found. Please add dune2-intro.mp3 to /public/audio/',
         'AboutPage',
       );
     }
@@ -71,14 +60,7 @@ export default function Page() {
                 it worth consenting to.
               </span>
             </h1>
-            <div
-              className="flex h-auto w-full max-w-full items-start justify-start hover:cursor-pointer md:-mt-[75px] md:h-[200px] md:w-[600px]"
-              onClick={handleInfoClick}
-              role="button"
-              tabIndex={0}
-              onKeyDown={(e) => e.key === 'Enter' && handleInfoClick()}
-              aria-label="Play info sound"
-            >
+            <div className="flex h-auto w-full max-w-full items-start justify-start md:-mt-[75px] md:h-[200px] md:w-[600px]">
               <div className="mt-5 flex flex-col items-start md:mt-[105px]">
                 <div className="flex items-center space-x-2">
                   <Terminal className="h-3 w-3" />
