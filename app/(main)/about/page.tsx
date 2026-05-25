@@ -45,14 +45,14 @@ export default function Page() {
                 machine.
                 <br></br>
                 <br></br>We work at the seam where cybernetics overtakes
-                culture — where intelligence ceases to be a tool & begins to
+                culture: where intelligence ceases to be a tool & begins to
                 behave as terrain. Each interface is a frontier. Each protocol,
                 a treaty with something larger than us. The corporation, in
                 this register, is no longer an organization but a probe: an
                 instrument tuned to a signal arriving from further down the
                 timeline.
                 <br></br>
-                <br></br>Most software is haunted — by legacy, by neglect, by
+                <br></br>Most software is haunted: by legacy, by neglect, by
                 the residue of decisions no one remembers making. We design
                 systems that exorcise this residue & route the user instead
                 through clarity, velocity, & a kind of quiet awe. Cyberspace
