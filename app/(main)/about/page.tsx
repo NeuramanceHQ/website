@@ -3,7 +3,7 @@
 import { useGlobalAudio } from '@/lib/contexts/AudioContext';
 import { logWarning } from '@/lib/utils/logger';
 import { EnvelopeClosedIcon } from '@radix-ui/react-icons';
-import { Terminal, Twitter } from 'lucide-react';
+import { Terminal } from 'lucide-react';
 
 export default function Page() {
   const { playOverlayTrack } = useGlobalAudio();
@@ -52,7 +52,7 @@ export default function Page() {
                 instrument tuned to a signal arriving from further down the
                 timeline.
                 <br></br>
-                <br></br>Most software is haunted: by legacy, by neglect, by
+                <br></br>Most software is haunted by legacy, by neglect, by
                 the residue of decisions no one remembers making. We design
                 systems that exorcise this residue & route the user instead
                 through clarity, velocity, & a kind of quiet awe. Cyberspace
