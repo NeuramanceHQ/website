@@ -7,4 +7,3 @@ Status: private beta. Access is by request.
 ## Contact
 
 - [Request access](mailto:austin@neuramance.com?subject=Neuramance%20Metaltech%20access): email austin@neuramance.com
-- [About](https://neuramance.com/about): the company and how to reach it

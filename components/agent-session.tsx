@@ -17,7 +17,12 @@ export function AgentSession() {
   return (
     <div {...stylex.props(styles.window)}>
       <div {...stylex.props(styles.titlebar)}>
-        <span>claude — ~/rover</span>
+        <span aria-hidden {...stylex.props(styles.lights)}>
+          <span {...stylex.props(styles.light('#ff5f57'))} />
+          <span {...stylex.props(styles.light('#febc2e'))} />
+          <span {...stylex.props(styles.light('#28c840'))} />
+        </span>
+        <span {...stylex.props(styles.title)}>claude — ~/rover</span>
         <span {...stylex.props(styles.tag)}>Example</span>
       </div>
       <pre {...stylex.props(styles.body)}>
@@ -70,42 +75,61 @@ const styles = stylex.create({
   window: {
     width: '100%',
     overflow: 'hidden',
-    backgroundColor: 'rgb(10 11 16 / 0.82)',
+    backgroundColor: '#07080c',
+    backgroundImage:
+      'repeating-linear-gradient(180deg, rgb(255 255 255 / 0.025) 0 1px, transparent 1px 3px)',
     borderWidth: 1,
     borderStyle: 'solid',
-    borderColor: 'rgb(255 255 255 / 0.1)',
-    borderRadius: 8,
+    borderColor: 'rgb(0 0 0 / 0.9)',
+    borderRadius: 6,
     boxShadow:
-      '0 24px 60px -24px rgb(0 0 0 / 0.9), 0 0 0 1px rgb(0 0 0 / 0.6), inset 0 1px 0 rgb(255 255 255 / 0.06)',
-    backdropFilter: 'blur(12px)',
+      '0 28px 60px -24px rgb(0 0 0 / 0.95), 0 0 0 1px rgb(255 255 255 / 0.12), 0 0 40px -10px rgb(54 70 217 / 0.35)',
   },
   titlebar: {
-    display: 'flex',
+    display: 'grid',
+    gridTemplateColumns: '1fr auto 1fr',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    height: 28,
-    paddingInline: '0.75rem',
+    height: 26,
+    paddingInline: '0.625rem',
     fontFamily: fonts.mono,
     fontSize: 11,
-    color: colors.muted,
+    color: '#1d2028',
     backgroundImage:
-      'linear-gradient(180deg, #2a2d36 0%, #1a1c23 52%, #15171d 100%)',
+      'repeating-linear-gradient(90deg, rgb(255 255 255 / 0.06) 0 1px, transparent 1px 2px), linear-gradient(180deg, #e9edf2 0%, #c9cfd8 48%, #b4bbc6 52%, #d3d8df 100%)',
     borderBottomWidth: 1,
     borderBottomStyle: 'solid',
     borderBottomColor: 'rgb(0 0 0 / 0.7)',
     boxShadow: 'inset 0 1px 0 rgb(255 255 255 / 0.12)',
   },
+  lights: {
+    display: 'flex',
+    gap: 6,
+  },
+  light: (color: string) => ({
+    width: 11,
+    height: 11,
+    borderRadius: '50%',
+    backgroundColor: color,
+    backgroundImage:
+      'radial-gradient(circle at 50% 30%, rgb(255 255 255 / 0.85), rgb(255 255 255 / 0) 55%)',
+    boxShadow:
+      'inset 0 0 0 0.5px rgb(0 0 0 / 0.45), 0 1px 0 rgb(255 255 255 / 0.6)',
+  }),
+  title: {
+    textShadow: '0 1px 0 rgb(255 255 255 / 0.7)',
+  },
   tag: {
+    justifySelf: 'end',
     paddingInline: '0.375rem',
-    fontSize: 10,
-    lineHeight: '1rem',
-    letterSpacing: '0.08em',
+    fontFamily: fonts.micro,
+    fontSize: 8,
+    lineHeight: '0.875rem',
     textTransform: 'uppercase',
-    color: colors.periwinkle,
+    color: '#2a2e38',
     borderWidth: 1,
     borderStyle: 'solid',
-    borderColor: 'rgb(170 182 255 / 0.3)',
-    borderRadius: 3,
+    borderColor: 'rgb(0 0 0 / 0.25)',
+    borderRadius: 2,
   },
   body: {
     display: 'flex',

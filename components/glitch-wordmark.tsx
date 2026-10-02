@@ -3,8 +3,7 @@
 import * as stylex from '@stylexjs/stylex';
 import { useEffect, useState } from 'react';
 import { useGlitch } from 'react-powerglitch';
-import { shared } from '@/components/styles';
-import { fonts } from '@/lib/tokens.stylex';
+import { colors, fonts } from '@/lib/tokens.stylex';
 
 const GLITCH_MS = 3000;
 const FIRST_SWITCH_DELAY_MS = 2700;
@@ -19,12 +18,16 @@ const NAMES = [
 
 export function GlitchWordmark() {
   const [step, setStep] = useState(0);
-  const { ref } = useGlitch({
+  const { ref, stopGlitch } = useGlitch({
     timing: { duration: GLITCH_MS, iterations: Infinity },
     glitchTimeSpan: { start: 0.88, end: 1 },
   });
 
   useEffect(() => {
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+      stopGlitch();
+      return;
+    }
     let interval: ReturnType<typeof setInterval> | undefined;
     const advance = () => {
       if (!document.hidden) setStep((current) => current + 1);
@@ -36,13 +39,11 @@ export function GlitchWordmark() {
       clearTimeout(timeout);
       clearInterval(interval);
     };
-  }, []);
+  }, [stopGlitch]);
 
   return (
-    <div ref={ref} {...stylex.props(styles.frame)}>
-      <h1 {...stylex.props(shared.gradientText, styles.name)}>
-        {NAMES[step % NAMES.length]}
-      </h1>
+    <div ref={ref} aria-hidden {...stylex.props(styles.frame)}>
+      <p {...stylex.props(styles.name)}>{NAMES[step % NAMES.length]}</p>
     </div>
   );
 }
@@ -54,9 +55,11 @@ const styles = stylex.create({
     willChange: 'transform',
   },
   name: {
-    fontFamily: fonts.mono,
-    fontSize: '0.875rem',
-    lineHeight: { default: '1.25rem', '@media (min-width: 40rem)': 1.25 },
-    letterSpacing: '-0.025em',
+    fontFamily: fonts.display,
+    fontSize: 12,
+    lineHeight: '1rem',
+    letterSpacing: '0.14em',
+    whiteSpace: 'nowrap',
+    color: colors.muted,
   },
 });

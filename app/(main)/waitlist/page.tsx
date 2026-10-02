@@ -1,71 +1,48 @@
 import * as stylex from '@stylexjs/stylex';
-import { Terminal } from 'lucide-react';
+import { panel } from '@/components/styles';
 import { colors, fonts } from '@/lib/tokens.stylex';
 
 export default function Page() {
   return (
-    <main {...stylex.props(styles.main)}>
-      <div role="alert" {...stylex.props(styles.alert)}>
-        <Terminal {...stylex.props(styles.icon)} />
-        <h5 {...stylex.props(styles.title)}>You are on the waitlist.</h5>
-        <div {...stylex.props(styles.description)}>
+    <main {...stylex.props(panel.page)}>
+      <section role="alert" {...stylex.props(panel.card)}>
+        <p {...stylex.props(panel.label)}>
+          <span aria-hidden {...stylex.props(styles.dot)} />
+          Status — confirmed
+        </p>
+        <h1 {...stylex.props(panel.title)}>You are on the waitlist.</h1>
+        <p {...stylex.props(panel.body)}>
           Thank you very much for your interest in Neuramance.
-          <br />
-          <br />
-          <strong>Neuramance</strong> is currently in private beta, as we are
-          still working on building the product.
-          <br />
-          <br />
+        </p>
+        <p {...stylex.props(panel.body)}>
+          <strong {...stylex.props(styles.strong)}>Neuramance</strong> is
+          currently in private beta, as we are still working on building the
+          product.
+        </p>
+        <p {...stylex.props(panel.body)}>
           Look out for emails containing updates & news, including beta access.
-          <br />
-          <br />
-          Thank you for your support,
-          <br />
-          <p {...stylex.props(styles.signature)}>- Austin @ Neuramance</p>
-        </div>
-      </div>
+        </p>
+        <p {...stylex.props(panel.body)}>Thank you for your support,</p>
+        <p {...stylex.props(styles.signature)}>- Austin @ Neuramance</p>
+      </section>
     </main>
   );
 }
 
 const styles = stylex.create({
-  main: {
-    display: 'flex',
-    flexDirection: 'column',
-    alignItems: 'center',
-    justifyContent: 'center',
-    minHeight: '100vh',
+  dot: {
+    width: 6,
+    height: 6,
+    borderRadius: '50%',
+    backgroundColor: colors.neon,
+    boxShadow: `0 0 6px ${colors.neon}`,
   },
-  alert: {
-    position: 'relative',
-    width: 600,
-    padding: '1rem',
-    borderWidth: 1,
-    borderStyle: 'solid',
-    borderColor: colors.border,
-    borderRadius: '0.375rem',
-  },
-  icon: {
-    position: 'absolute',
-    top: '1rem',
-    left: '1rem',
-    width: '1rem',
-    height: '1rem',
-  },
-  title: {
-    marginBottom: '0.25rem',
-    paddingLeft: '1.75rem',
-    fontWeight: 500,
-    lineHeight: 1,
-    letterSpacing: '-0.025em',
-  },
-  description: {
-    paddingLeft: '1.75rem',
-    fontSize: '0.875rem',
-    lineHeight: '1.25rem',
+  strong: {
+    color: colors.foreground,
   },
   signature: {
     fontFamily: fonts.mono,
-    lineHeight: 1.625,
+    fontSize: 13,
+    color: colors.foreground,
   },
 });

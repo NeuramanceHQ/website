@@ -4,28 +4,18 @@ test('home page renders its production styles', async ({ page }) => {
   await page.goto('/');
   await expect(page.locator('body')).toHaveCSS(
     'background-color',
-    'rgb(2, 2, 2)',
+    'rgb(5, 5, 6)',
   );
-  const access = page.getByRole('link', {
-    name: 'Request access',
-    exact: true,
-  });
-  await expect(access).toHaveCSS('height', '40px');
+  for (const [role, height] of [
+    ['main', '40px'],
+    ['banner', '28px'],
+  ] as const) {
+    const access = page
+      .getByRole(role)
+      .getByRole('link', { name: 'Request access ↗', exact: true });
+    await expect(access).toHaveCSS('height', height);
+  }
 });
-
-for (const [width, padding] of [
-  [800, '96px'],
-  [1100, '128px'],
-  [1440, '192px'],
-] as const) {
-  test(`main padding steps to ${padding} at ${width}px wide`, async ({
-    page,
-  }) => {
-    await page.setViewportSize({ width, height: 900 });
-    await page.goto('/about');
-    await expect(page.locator('main')).toHaveCSS('padding-bottom', padding);
-  });
-}
 
 for (const [width, height] of [
   [320, 568],
@@ -59,19 +49,19 @@ for (const [width, height] of [
     expect(viewport.mainOverflow).toBe(0);
 
     for (const content of [
-      page
-        .getByRole('heading', {
-          name: 'NEURAMANCE® METALTECH CORPORATION',
-          level: 1,
-          exact: true,
-        })
-        .first(),
+      page.getByRole('heading', {
+        name: 'Neuramance® Metaltech Corporation',
+        level: 1,
+        exact: true,
+      }),
       page.getByRole('heading', {
         name: 'Give your agents hands.',
         level: 2,
         exact: true,
       }),
-      page.getByRole('link', { name: 'Request access', exact: true }),
+      page
+        .getByRole('main')
+        .getByRole('link', { name: 'Request access ↗', exact: true }),
       page.getByRole('button', { name: 'Copy agent prompt', exact: true }),
     ]) {
       await expect(content).toBeVisible();
@@ -90,11 +80,10 @@ for (const [width, height] of [
 test('Request access stays reachable at 400% zoom', async ({ page }) => {
   await page.setViewportSize({ width: 320, height: 256 });
   await page.goto('/');
-  const access = page.getByRole('link', {
-    name: 'Request access',
-    exact: true,
-  });
-  await access.scrollIntoViewIfNeeded();
+  const access = page
+    .getByRole('main')
+    .getByRole('link', { name: 'Request access ↗', exact: true });
+  await access.evaluate((link) => link.scrollIntoView({ block: 'center' }));
   const box = await access.boundingBox();
   if (box === null) {
     throw new Error('Request access has no bounding box');
@@ -105,12 +94,84 @@ test('Request access stays reachable at 400% zoom', async ({ page }) => {
 
 test('Request access links to the Metaltech access email', async ({ page }) => {
   await page.goto('/');
-  await expect(
-    page.getByRole('link', { name: 'Request access', exact: true }),
-  ).toHaveAttribute(
-    'href',
-    'mailto:austin@neuramance.com?subject=Neuramance%20Metaltech%20access',
+  for (const role of ['main', 'banner'] as const) {
+    await expect(
+      page
+        .getByRole(role)
+        .getByRole('link', { name: 'Request access ↗', exact: true }),
+    ).toHaveAttribute(
+      'href',
+      'mailto:austin@neuramance.com?subject=Neuramance%20Metaltech%20access',
+    );
+  }
+});
+
+test('heading and header logo set NEURAMANCE and METALTECH on one line', async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  await page.goto('/');
+  const letters = await page
+    .getByRole('heading', {
+      name: 'Neuramance® Metaltech Corporation',
+      level: 1,
+      exact: true,
+    })
+    .locator('svg > path')
+    .evaluateAll((paths) =>
+      paths.map((path) => path.getBoundingClientRect().toJSON()),
+    );
+  expect(letters).toHaveLength('NEURAMANCEMETALTECH'.length);
+  const [first] = letters;
+  for (const letter of letters) {
+    expect(letter.top).toBeCloseTo(first.top, 0);
+    expect(letter.bottom).toBeCloseTo(first.bottom, 0);
+  }
+  expect(letters[10].left - letters[9].right).toBeGreaterThan(
+    letters[9].left - letters[8].right,
   );
+
+  const words = await page
+    .getByRole('banner')
+    .getByRole('link', { name: 'Neuramance Metaltech home', exact: true })
+    .locator('svg path')
+    .evaluateAll((paths) =>
+      paths.map((path) => path.getBoundingClientRect().toJSON()),
+    );
+  expect(words).toHaveLength(2);
+  expect(words[1].left).toBeGreaterThan(words[0].right);
+  expect(words[1].top).toBeCloseTo(words[0].top, 0);
+  expect(words[1].width).toBeGreaterThan(0);
+});
+
+test('header home link points to /', async ({ page }) => {
+  await page.goto('/');
+  await expect(
+    page
+      .getByRole('banner')
+      .getByRole('link', { name: 'Neuramance Metaltech home', exact: true }),
+  ).toHaveAttribute('href', '/');
+});
+
+test('header clock is visible at 1440x900 and hidden at 390x844', async ({
+  page,
+}) => {
+  await page.goto('/');
+  const clock = page
+    .getByRole('banner')
+    .getByText(/^\d{2}:\d{2}:\d{2} C[DS]T$/);
+  for (const { width, height, visible } of [
+    { width: 1440, height: 900, visible: true },
+    { width: 390, height: 844, visible: false },
+  ]) {
+    await page.setViewportSize({ width, height });
+    if (visible) {
+      await expect(clock).toBeVisible({ timeout: 10_000 });
+    } else {
+      await expect(clock).toBeHidden();
+    }
+  }
 });
 
 test('Copy agent prompt copies the exact prompt and resets within 4 seconds', async ({
@@ -159,6 +220,7 @@ test('/llms.txt serves the agent guide and is linked from the home page', async 
   const body = await response.text();
   expect(body.split(/\r?\n/)[0]).toBe('# Neuramance Metaltech Corporation');
   expect(body).toContain('austin@neuramance.com');
+  expect(body).not.toContain('/about');
 
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.goto('/');
@@ -220,7 +282,7 @@ test('home page publishes Metaltech metadata', async ({ page }) => {
     'Neuramance® Metaltech - Metal Parts for AI Agents',
   );
   for (const [selector, content] of [
-    ['meta[name="theme-color"]', '#020202'],
+    ['meta[name="theme-color"]', '#050506'],
     [
       'meta[property="og:title"]',
       'Neuramance® Metaltech - Give Your Agents Hands',
@@ -243,16 +305,6 @@ for (const { route, name, path } of [
     name: 'Play audio quote',
     path: '/audio/dune1-intro.mp3',
   },
-  {
-    route: '/about',
-    name: 'Play about audio quote',
-    path: '/audio/dune2-intro.mp3',
-  },
-  {
-    route: '/about',
-    name: 'Play got mail sound',
-    path: '/audio/got-mail.mp3',
-  },
 ]) {
   test(`${name} requests ${path}`, async ({ page }) => {
     await page.goto(route);
@@ -265,62 +317,26 @@ for (const { route, name, path } of [
   });
 }
 
-test('switching sounds mid-load raises no page error', async ({ page }) => {
-  const errors: Error[] = [];
-  page.on('pageerror', (error) => errors.push(error));
-  await page.route('**/audio/**', async (route) => {
-    await new Promise((resolve) => setTimeout(resolve, 500));
-    await route.continue();
-  });
-  await page.goto('/about');
-  const secondSound = page.waitForResponse(
-    (response) => new URL(response.url()).pathname === '/audio/got-mail.mp3',
-    { timeout: 10_000 },
-  );
-  await page
-    .getByRole('button', { name: 'Play about audio quote', exact: true })
-    .click();
-  await page
-    .getByRole('button', { name: 'Play got mail sound', exact: true })
-    .click();
-  await secondSound;
-  expect(errors).toEqual([]);
-});
-
-test('Products menu opens on hover only on mobile', async ({ page }) => {
-  await page.setViewportSize({ width: 375, height: 812 });
-  await page.goto('/');
-  const products = page.getByRole('button', { name: 'Products', exact: true });
-  const menu = page.getByRole('menu');
-  await expect(products).toBeVisible();
-  await expect(menu).toBeHidden();
-  await products.hover();
-  await expect(menu).toBeVisible();
-  await page.mouse.move(374, 811);
-  await expect(menu).toBeHidden();
-
-  await page.setViewportSize({ width: 1280, height: 800 });
-  await expect(products).toBeHidden();
+test('/about returns status 404', async ({ page }) => {
+  const response = await page.goto('/about');
+  expect(response?.status()).toBe(404);
 });
 
 for (const { route, text, level } of [
   {
     route: '/',
-    text: 'NEURAMANCE® METALTECH CORPORATION',
+    text: 'Neuramance® Metaltech Corporation',
     level: 1,
-  },
-  {
-    route: '/about',
-    text: 'Software from the future. On its own terms.',
   },
   {
     route: '/waitlist',
     text: 'You are on the waitlist.',
-    level: 5,
+    level: 1,
   },
   {
     route: '/error',
     text: 'Oops, something went wrong. 😭',
+    level: 1,
   },
 ]) {
   test(`${route} renders its expected content with status 200`, async ({
@@ -328,9 +344,11 @@ for (const { route, text, level } of [
   }) => {
     const response = await page.goto(route);
     expect(response?.status()).toBe(200);
-    const content = level
-      ? page.getByRole('heading', { name: text, level, exact: true }).first()
-      : page.getByText(text, { exact: true });
+    const content = page.getByRole('heading', {
+      name: text,
+      level,
+      exact: true,
+    });
     await expect(content).toBeVisible();
   });
 }

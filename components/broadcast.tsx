@@ -400,6 +400,7 @@ const styles = stylex.create({
     paddingInline: '6%',
     textAlign: 'center',
     textWrap: 'balance',
+    fontFamily: '"Helvetica Neue", Helvetica, Arial, sans-serif',
     fontSize: '6.25cqi',
     lineHeight: 1.04,
     fontWeight: 800,

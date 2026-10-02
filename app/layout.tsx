@@ -70,13 +70,18 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: '#020202',
+  themeColor: '#050506',
   colorScheme: 'dark',
 };
 
-const fontSans = localFont({
-  src: '../lib/fonts/InterVariable.woff2',
-  variable: '--font-sans',
+const fontDisplay = localFont({
+  src: '../lib/fonts/ShareTechMono-Regular.woff2',
+  variable: '--font-display',
+});
+
+const fontMicro = localFont({
+  src: '../lib/fonts/Silkscreen-Regular.woff2',
+  variable: '--font-micro',
 });
 
 const fontMono = localFont({
@@ -99,13 +104,15 @@ const structuredData = {
     '@type': 'ContactPoint',
     contactType: 'customer support',
     email: 'austin@neuramance.com',
-    url: 'https://neuramance.com/about',
   },
 };
 
 export default function RootLayout({ children }: LayoutProps<'/'>) {
   return (
-    <html lang="en" className={`${fontSans.variable} ${fontMono.variable}`}>
+    <html
+      lang="en"
+      className={`${fontDisplay.variable} ${fontMicro.variable} ${fontMono.variable}`}
+    >
       <head>
         <script
           type="application/ld+json"
@@ -121,7 +128,7 @@ const styles = stylex.create({
   body: {
     minHeight: '100dvh',
     overflowX: 'hidden',
-    fontFamily: fonts.sans,
+    fontFamily: fonts.display,
     WebkitFontSmoothing: 'antialiased',
     MozOsxFontSmoothing: 'grayscale',
     color: colors.foreground,

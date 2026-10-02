@@ -1,18 +1,28 @@
-import { act, cleanup, render, screen } from '@testing-library/react';
+import { act, cleanup, render } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { GlitchWordmark } from './glitch-wordmark';
 
-vi.mock('react-powerglitch', () => ({ useGlitch: () => ({ ref: () => {} }) }));
+const stopGlitch = vi.fn();
+vi.mock('react-powerglitch', () => ({
+  useGlitch: () => ({ ref: () => {}, stopGlitch }),
+}));
 
 const english = 'NEURAMANCE® METALTECH CORPORATION';
 const hiddenDescriptor = Object.getOwnPropertyDescriptor(document, 'hidden');
 
+const reducedMotion = (matches: boolean) => {
+  window.matchMedia = (query: string) =>
+    ({ matches, media: query }) as MediaQueryList;
+};
+
 beforeEach(() => {
   vi.useFakeTimers();
+  reducedMotion(false);
 });
 
 afterEach(() => {
   cleanup();
+  stopGlitch.mockClear();
   vi.useRealTimers();
   if (hiddenDescriptor) {
     Object.defineProperty(document, 'hidden', hiddenDescriptor);
@@ -23,9 +33,8 @@ afterEach(() => {
 
 describe('GlitchWordmark', () => {
   it('cycles languages on the 2700 ms offset schedule with two English cycles', () => {
-    render(<GlitchWordmark />);
-    const heading = screen.getByRole('heading', { level: 1 });
-    expect(heading.textContent).toBe(english);
+    const { container: wordmark } = render(<GlitchWordmark />);
+    expect(wordmark.textContent).toBe(english);
 
     let elapsed = 0;
     for (const [time, name] of [
@@ -48,19 +57,18 @@ describe('GlitchWordmark', () => {
       act(() => {
         vi.advanceTimersByTime(time - elapsed);
       });
-      expect(heading.textContent, `at ${time} ms`).toBe(name);
+      expect(wordmark.textContent, `at ${time} ms`).toBe(name);
       elapsed = time;
     }
   });
 
   it('pauses while the page is hidden and resumes on the next tick', () => {
-    render(<GlitchWordmark />);
-    const heading = screen.getByRole('heading', { level: 1 });
+    const { container: wordmark } = render(<GlitchWordmark />);
 
     act(() => {
       vi.advanceTimersByTime(8700);
     });
-    expect(heading.textContent).toBe('神念金属科技公司');
+    expect(wordmark.textContent).toBe('神念金属科技公司');
 
     Object.defineProperty(document, 'hidden', {
       configurable: true,
@@ -69,7 +77,7 @@ describe('GlitchWordmark', () => {
     act(() => {
       vi.advanceTimersByTime(9000);
     });
-    expect(heading.textContent).toBe('神念金属科技公司');
+    expect(wordmark.textContent).toBe('神念金属科技公司');
 
     Object.defineProperty(document, 'hidden', {
       configurable: true,
@@ -78,11 +86,22 @@ describe('GlitchWordmark', () => {
     act(() => {
       vi.advanceTimersByTime(2999);
     });
-    expect(heading.textContent).toBe('神念金属科技公司');
+    expect(wordmark.textContent).toBe('神念金属科技公司');
 
     act(() => {
       vi.advanceTimersByTime(1);
     });
-    expect(heading.textContent).toBe('神念メタルテック株式会社');
+    expect(wordmark.textContent).toBe('神念メタルテック株式会社');
+  });
+
+  it('holds the English name when reduced motion is requested', () => {
+    reducedMotion(true);
+    const { container: wordmark } = render(<GlitchWordmark />);
+
+    act(() => {
+      vi.advanceTimersByTime(30_000);
+    });
+    expect(wordmark.textContent).toBe(english);
+    expect(stopGlitch).toHaveBeenCalled();
   });
 });

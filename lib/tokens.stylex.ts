@@ -1,12 +1,11 @@
 import * as stylex from '@stylexjs/stylex';
 
 export const colors = stylex.defineConsts({
-  background: '#020202',
-  foreground: 'hsl(210 40% 98%)',
-  border: '#2f3336',
-  muted: '#b8b8b8',
+  background: '#050506',
+  foreground: '#e9edf0',
+  muted: '#9aa0ae',
   faint: '#777c8c',
-  line: 'rgb(255 255 255 / 0.07)',
+  line: 'rgb(255 255 255 / 0.08)',
   periwinkle: '#aab6ff',
   frost: '#dbf2f4',
   ice: '#a5cfd8',
@@ -15,16 +14,17 @@ export const colors = stylex.defineConsts({
   neon: '#9dffd6',
   lamp: '#ffd38a',
   beacon: '#ff5a5a',
+  signal: '#e0262e',
 });
 
 export const fonts = stylex.defineConsts({
-  sans: 'var(--font-sans), ui-sans-serif, system-ui, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji"',
+  display:
+    'var(--font-display), "Share Tech Mono", ui-monospace, SFMono-Regular, Menlo, monospace',
+  micro: 'var(--font-micro), "Silkscreen", ui-monospace, monospace',
   mono: 'var(--font-mono), ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace',
 });
 
-export const gradients = stylex.defineConsts({
-  gray400:
-    'linear-gradient(to right, #fff 0%, oklch(70.7% 0.022 261.325) 100%)',
-  gray100:
-    'linear-gradient(to right, #fff 0%, oklch(96.7% 0.003 264.542) 100%)',
+export const chrome = stylex.defineConsts({
+  button:
+    'linear-gradient(180deg, #ffffff 0%, #eef1f5 44%, #c4cad0 52%, #e3e8ee 100%)',
 });

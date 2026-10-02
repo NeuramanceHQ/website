@@ -1,70 +1,94 @@
 import * as stylex from '@stylexjs/stylex';
-import { colors, fonts, gradients } from '@/lib/tokens.stylex';
+import { chrome, colors, fonts } from '@/lib/tokens.stylex';
 
-export const shared = stylex.create({
-  container: {
-    width: '100%',
-    maxWidth: { default: 'none', '@media (min-width: 1400px)': '1400px' },
-    marginInline: 'auto',
-    paddingInline: { default: '1rem', '@media (min-width: 48rem)': '1.5rem' },
-  },
-  gradientText: {
-    backgroundImage: gradients.gray400,
-    WebkitBackgroundClip: 'text',
-    backgroundClip: 'text',
-    color: 'transparent',
-  },
-  quote: {
-    position: 'absolute',
-    bottom: '0.5rem',
-    left: '50%',
-    width: '80%',
-    maxWidth: '64rem',
-    translate: '-50%',
-    paddingInline: '1rem',
-    textAlign: 'center',
-    fontFamily: fonts.mono,
-    fontSize: 10,
-    letterSpacing: '-0.025em',
-    cursor: 'pointer',
-  },
-});
+const CHAMFER =
+  'polygon(8px 0, 100% 0, 100% calc(100% - 8px), calc(100% - 8px) 100%, 0 100%, 0 8px)';
 
-export const button = stylex.create({
+export const cta = stylex.create({
   base: {
     display: 'inline-flex',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: '0.25rem',
-    height: 26,
-    paddingBlock: '0.25rem',
-    paddingLeft: '0.5rem',
-    paddingRight: '0.625rem',
+    gap: '0.5rem',
+    height: 40,
+    paddingInline: '1.125rem',
+    fontFamily: fonts.display,
+    fontSize: 13,
+    letterSpacing: '0.08em',
+    textTransform: 'uppercase',
     whiteSpace: 'nowrap',
-    fontSize: '0.75rem',
-    lineHeight: '1rem',
-    fontWeight: 500,
     cursor: 'pointer',
-    backgroundColor: {
-      default: colors.background,
-      '@media (hover: hover)': { default: null, ':hover': colors.border },
-    },
-    borderWidth: 1,
-    borderStyle: 'solid',
-    borderColor: colors.border,
-    borderRadius: '0.375rem',
-    transitionProperty: 'background-color',
+    clipPath: CHAMFER,
+    transitionProperty: 'filter',
     transitionDuration: '150ms',
-    transitionTimingFunction: 'cubic-bezier(0.4, 0, 0.2, 1)',
-  },
-  mono: {
-    fontFamily: fonts.mono,
-  },
-  compact: {
-    paddingLeft: { default: '0.375rem', '@media (min-width: 40rem)': '0.5rem' },
-    paddingRight: {
-      default: '0.375rem',
-      '@media (min-width: 40rem)': '0.625rem',
+    filter: {
+      default: 'none',
+      '@media (hover: hover)': { default: null, ':hover': 'brightness(1.15)' },
     },
+  },
+  primary: {
+    color: '#05070f',
+    backgroundImage: chrome.button,
+    boxShadow:
+      'inset 0 1px 0 #fff, inset 0 -1px 0 rgb(61 64 81 / 0.5), inset 1px 0 0 rgb(255 255 255 / 0.6)',
+  },
+  secondary: {
+    color: colors.foreground,
+    backgroundImage:
+      'linear-gradient(180deg, rgb(255 255 255 / 0.11), rgb(255 255 255 / 0.03))',
+    boxShadow:
+      'inset 0 1px 0 rgb(255 255 255 / 0.18), inset 0 0 0 1px rgb(255 255 255 / 0.1)',
+  },
+  small: {
+    height: 28,
+    paddingInline: '0.75rem',
+    fontSize: 11,
+  },
+});
+
+export const panel = stylex.create({
+  page: {
+    display: 'grid',
+    placeItems: 'center',
+    height: '100%',
+    overflowY: 'auto',
+    paddingBlock: '1.5rem',
+    paddingInline: '1rem',
+  },
+  card: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '1rem',
+    width: '100%',
+    maxWidth: '34rem',
+    padding: '1.75rem',
+    backgroundImage:
+      'linear-gradient(180deg, rgb(255 255 255 / 0.05), rgb(255 255 255 / 0.015))',
+    boxShadow:
+      'inset 0 1px 0 rgb(255 255 255 / 0.12), inset 0 0 0 1px rgb(255 255 255 / 0.08)',
+    clipPath: CHAMFER,
+  },
+  label: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '0.5rem',
+    fontFamily: fonts.micro,
+    fontSize: 8,
+    lineHeight: 1,
+    textTransform: 'uppercase',
+    color: colors.ice,
+  },
+  title: {
+    fontFamily: fonts.display,
+    fontSize: '1.75rem',
+    lineHeight: 1.1,
+    textTransform: 'uppercase',
+    color: colors.foreground,
+  },
+  body: {
+    fontFamily: fonts.display,
+    fontSize: 14,
+    lineHeight: '1.375rem',
+    color: colors.muted,
   },
 });

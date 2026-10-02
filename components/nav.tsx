@@ -1,80 +1,116 @@
 import * as stylex from '@stylexjs/stylex';
-import { Terminal } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
-import { ProductsMenu } from '@/components/products-menu';
-import { button } from '@/components/styles';
-import { colors } from '@/lib/tokens.stylex';
+import { Clock } from '@/components/clock';
+import { cta } from '@/components/styles';
+import { WORDMARK } from '@/lib/logotype';
+import { ACCESS_HREF } from '@/lib/site';
+import { colors, fonts } from '@/lib/tokens.stylex';
+
+const EXTEND = 2.1;
 
 export function Nav() {
   return (
     <header {...stylex.props(styles.header)}>
-      <div {...stylex.props(styles.group)}>
-        <Link
-          href="/"
-          {...stylex.props(
-            button.base,
-            button.mono,
-            button.compact,
-            styles.fixed,
-          )}
-        >
-          <Image src="/hand.svg" alt="Hand icon" width={10} height={8} />
-          <span {...stylex.props(styles.brand)}>Neuramance</span>
-        </Link>
-        <ProductsMenu />
-      </div>
       <Link
-        href="/about"
-        aria-label="About/Contact"
-        {...stylex.props(button.base, button.mono, styles.fixed)}
+        href="/"
+        aria-label="Neuramance Metaltech home"
+        {...stylex.props(styles.lockup)}
       >
-        <Terminal {...stylex.props(styles.icon)} />
-        <span {...stylex.props(styles.about)}>About/Contact</span>
+        <Image src="/hand.svg" alt="" width={12} height={15} />
+        <svg
+          aria-hidden
+          viewBox={`0 0 ${WORDMARK.width * EXTEND} ${WORDMARK.height}`}
+          {...stylex.props(styles.logotype)}
+        >
+          <g transform={`scale(${EXTEND} 1)`}>
+            <path d={WORDMARK.name.join('')} />
+            <path
+              d={WORDMARK.division.join('')}
+              {...stylex.props(styles.division)}
+            />
+          </g>
+        </svg>
       </Link>
+      <div {...stylex.props(styles.group)}>
+        <p {...stylex.props(styles.onAir)}>
+          <span aria-hidden {...stylex.props(styles.dot)} />
+          On air
+          <Clock {...stylex.props(styles.clock)} />
+        </p>
+        <a
+          href={ACCESS_HREF}
+          {...stylex.props(cta.base, cta.primary, cta.small, styles.access)}
+        >
+          Request access ↗
+        </a>
+      </div>
     </header>
   );
 }
 
+const blink = stylex.keyframes({ '50%': { opacity: 0.25 } });
+
 const styles = stylex.create({
   header: {
-    position: 'fixed',
-    top: 0,
-    right: 0,
-    left: 0,
-    zIndex: 50,
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'space-between',
-    gap: '0.25rem',
-    width: '100%',
-    paddingBlock: '0.25rem',
-    paddingInline: {
-      default: '0.25rem',
-      '@media (min-width: 40rem)': '0.5rem',
-    },
-    backgroundColor: colors.background,
+    gap: '1rem',
+    height: 48,
+    paddingInline: { default: '1rem', '@media (min-width: 48rem)': '2rem' },
     borderBottomWidth: 1,
     borderBottomStyle: 'solid',
-    borderBottomColor: colors.border,
+    borderBottomColor: colors.line,
+  },
+  lockup: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '0.625rem',
+    minWidth: 0,
+    color: colors.foreground,
+  },
+  logotype: {
+    flexShrink: 0,
+    height: 12,
+    width: 'auto',
+    fill: 'currentColor',
+  },
+  division: {
+    fill: colors.muted,
+  },
+  access: {
+    display: { default: 'none', '@media (min-width: 30rem)': 'inline-flex' },
   },
   group: {
     display: 'flex',
     alignItems: 'center',
-    gap: { default: '0.125rem', '@media (min-width: 40rem)': '0.25rem' },
-    minWidth: 0,
+    gap: '1.25rem',
   },
-  fixed: {
-    flexShrink: 0,
+  onAir: {
+    display: { default: 'none', '@media (min-width: 48rem)': 'flex' },
+    alignItems: 'center',
+    gap: '0.5rem',
+    fontFamily: fonts.micro,
+    fontSize: 8,
+    lineHeight: 1,
+    textTransform: 'uppercase',
+    color: colors.muted,
   },
-  brand: {
-    display: { default: 'none', '@media (min-width: 360px)': 'inline' },
+  dot: {
+    width: 6,
+    height: 6,
+    borderRadius: '50%',
+    backgroundColor: colors.signal,
+    boxShadow: `0 0 6px ${colors.signal}`,
+    animationName: blink,
+    animationDuration: '1.6s',
+    animationTimingFunction: 'steps(1)',
+    animationIterationCount: 'infinite',
   },
-  about: {
-    display: { default: 'none', '@media (min-width: 40rem)': 'inline' },
-  },
-  icon: {
-    width: 10,
-    height: 8,
+  clock: {
+    minWidth: '9ch',
+    color: colors.foreground,
+    fontVariantNumeric: 'tabular-nums',
   },
 });
