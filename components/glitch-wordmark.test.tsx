@@ -4,7 +4,7 @@ import { GlitchWordmark } from './glitch-wordmark';
 
 vi.mock('react-powerglitch', () => ({ useGlitch: () => ({ ref: () => {} }) }));
 
-const english = 'NEURAMANCE® CYBERSYSTEMS CORPORATION';
+const english = 'NEURAMANCE® METALTECH CORPORATION';
 const hiddenDescriptor = Object.getOwnPropertyDescriptor(document, 'hidden');
 
 beforeEach(() => {
@@ -32,18 +32,18 @@ describe('GlitchWordmark', () => {
       [2700, english],
       [5700, english],
       [8699, english],
-      [8700, '神念赛博系统公司'],
-      [11699, '神念赛博系统公司'],
-      [11700, '神念サイバーシステム株式会社'],
-      [14699, '神念サイバーシステム株式会社'],
-      [14700, 'न्यूरामैन्स साइबरसिस्टम्स कॉर्पोरेशन'],
-      [17699, 'न्यूरामैन्स साइबरसिस्टम्स कॉर्पोरेशन'],
-      [17700, 'مؤسسة نيورامانس للأنظمة السيبرانية'],
-      [20699, 'مؤسسة نيورامانس للأنظمة السيبرانية'],
+      [8700, '神念金属科技公司'],
+      [11699, '神念金属科技公司'],
+      [11700, '神念メタルテック株式会社'],
+      [14699, '神念メタルテック株式会社'],
+      [14700, 'न्यूरामैन्स मेटलटेक कॉर्पोरेशन'],
+      [17699, 'न्यूरामैन्स मेटलटेक कॉर्पोरेशन'],
+      [17700, 'مؤسسة نيورامانس للتقنيات المعدنية'],
+      [20699, 'مؤسسة نيورامانس للتقنيات المعدنية'],
       [20700, english],
       [23700, english],
       [26699, english],
-      [26700, '神念赛博系统公司'],
+      [26700, '神念金属科技公司'],
     ] as const) {
       act(() => {
         vi.advanceTimersByTime(time - elapsed);
@@ -60,7 +60,7 @@ describe('GlitchWordmark', () => {
     act(() => {
       vi.advanceTimersByTime(8700);
     });
-    expect(heading.textContent).toBe('神念赛博系统公司');
+    expect(heading.textContent).toBe('神念金属科技公司');
 
     Object.defineProperty(document, 'hidden', {
       configurable: true,
@@ -69,7 +69,7 @@ describe('GlitchWordmark', () => {
     act(() => {
       vi.advanceTimersByTime(9000);
     });
-    expect(heading.textContent).toBe('神念赛博系统公司');
+    expect(heading.textContent).toBe('神念金属科技公司');
 
     Object.defineProperty(document, 'hidden', {
       configurable: true,
@@ -78,11 +78,11 @@ describe('GlitchWordmark', () => {
     act(() => {
       vi.advanceTimersByTime(2999);
     });
-    expect(heading.textContent).toBe('神念赛博系统公司');
+    expect(heading.textContent).toBe('神念金属科技公司');
 
     act(() => {
       vi.advanceTimersByTime(1);
     });
-    expect(heading.textContent).toBe('神念サイバーシステム株式会社');
+    expect(heading.textContent).toBe('神念メタルテック株式会社');
   });
 });

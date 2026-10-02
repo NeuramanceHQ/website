@@ -1,5 +1,5 @@
 import * as stylex from '@stylexjs/stylex';
-import type { Metadata } from 'next';
+import type { Metadata, Viewport } from 'next';
 import localFont from 'next/font/local';
 import { colors, fonts } from '@/lib/tokens.stylex';
 import './globals.css';
@@ -7,19 +7,17 @@ import './globals.css';
 export const metadata: Metadata = {
   title: {
     template: '%s | Neuramance®',
-    default: 'Neuramance® - Official Website',
+    default: 'Neuramance® Metaltech - Metal Parts for AI Agents',
   },
   description:
-    'Neuramance builds software from the future: superintelligent optimization & improvement of processes, operations, strategic plans, & growth campaigns.',
+    'Neuramance Metaltech lets AI agents like Claude Code and Codex quote, order, and track real metal parts and fabrication, programmatically.',
   keywords: [
-    'AI',
-    'artificial intelligence',
-    'process optimization',
-    'turbocognition',
-    'hyperanalysis',
-    'multimedia',
-    'operations',
-    'productivity',
+    'AI agents',
+    'Claude Code',
+    'Codex',
+    'manufacturing API',
+    'metal fabrication',
+    'metal parts',
   ],
   authors: [{ name: 'Neuramance' }],
   creator: 'Neuramance',
@@ -38,24 +36,24 @@ export const metadata: Metadata = {
     type: 'website',
     locale: 'en_US',
     url: 'https://neuramance.com',
-    siteName: 'Neuramance',
-    title: 'Neuramance® - Software From the Future',
+    siteName: 'Neuramance Metaltech',
+    title: 'Neuramance® Metaltech - Give Your Agents Hands',
     description:
-      'Superintelligent Optimization & Improvement of Processes, Operations, Strategic Plans, & Growth Campaigns.',
+      'Metal parts and fabrication, ordered by AI agents. Claude Code, Codex, and any agent can quote, order, and track real parts in code.',
     images: [
       {
         url: '/opengraph-image.jpg',
         width: 1200,
         height: 630,
-        alt: 'Neuramance - Software From the Future',
+        alt: 'Neuramance Metaltech - Give Your Agents Hands',
       },
     ],
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'Neuramance® - Software From the Future',
+    title: 'Neuramance® Metaltech - Give Your Agents Hands',
     description:
-      'Superintelligent Optimization & Improvement of Processes, Operations, Strategic Plans, & Growth Campaigns.',
+      'Metal parts and fabrication, ordered by AI agents. Claude Code, Codex, and any agent can quote, order, and track real parts in code.',
     images: ['/opengraph-image.jpg'],
   },
   robots: {
@@ -71,6 +69,11 @@ export const metadata: Metadata = {
   },
 };
 
+export const viewport: Viewport = {
+  themeColor: '#020202',
+  colorScheme: 'dark',
+};
+
 const fontSans = localFont({
   src: '../lib/fonts/InterVariable.woff2',
   variable: '--font-sans',
@@ -84,24 +87,19 @@ const fontMono = localFont({
 const structuredData = {
   '@context': 'https://schema.org',
   '@type': 'Organization',
-  name: 'Neuramance',
+  name: 'Neuramance Metaltech Corporation',
+  alternateName: 'Neuramance',
   url: 'https://neuramance.com',
   logo: 'https://neuramance.com/opengraph-image.jpg',
   description:
-    'Software From the Future. Superintelligent Optimization & Improvement of Processes, Operations, Strategic Plans, & Growth Campaigns.',
+    'Neuramance Metaltech lets AI agents like Claude Code and Codex quote, order, and track real metal parts and fabrication, programmatically.',
   foundingDate: '2025',
   sameAs: ['https://twitter.com/neuramance', 'https://github.com/neuramance'],
   contactPoint: {
     '@type': 'ContactPoint',
-    contactType: 'Customer Service',
-    url: 'https://neuramance.com/contact',
-  },
-  offers: {
-    '@type': 'Offer',
-    name: 'Software From the Future',
-    description:
-      'Access to Neuramance AI platform for superintelligent process & productivity optimization.',
-    category: 'Software',
+    contactType: 'customer support',
+    email: 'austin@neuramance.com',
+    url: 'https://neuramance.com/about',
   },
 };
 
@@ -121,7 +119,7 @@ export default function RootLayout({ children }: LayoutProps<'/'>) {
 
 const styles = stylex.create({
   body: {
-    minHeight: '100vh',
+    minHeight: '100dvh',
     overflowX: 'hidden',
     fontFamily: fonts.sans,
     WebkitFontSmoothing: 'antialiased',

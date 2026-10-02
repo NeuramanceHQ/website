@@ -5,6 +5,16 @@ export const colors = stylex.defineConsts({
   foreground: 'hsl(210 40% 98%)',
   border: '#2f3336',
   muted: '#b8b8b8',
+  faint: '#777c8c',
+  line: 'rgb(255 255 255 / 0.07)',
+  periwinkle: '#aab6ff',
+  frost: '#dbf2f4',
+  ice: '#a5cfd8',
+  night: '#0b1240',
+  silhouette: '#0f1650',
+  neon: '#9dffd6',
+  lamp: '#ffd38a',
+  beacon: '#ff5a5a',
 });
 
 export const fonts = stylex.defineConsts({

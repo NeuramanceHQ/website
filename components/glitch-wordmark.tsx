@@ -9,12 +9,12 @@ import { fonts } from '@/lib/tokens.stylex';
 const GLITCH_MS = 3000;
 const FIRST_SWITCH_DELAY_MS = 2700;
 const NAMES = [
-  'NEURAMANCE® CYBERSYSTEMS CORPORATION',
-  'NEURAMANCE® CYBERSYSTEMS CORPORATION',
-  '神念赛博系统公司',
-  '神念サイバーシステム株式会社',
-  'न्यूरामैन्स साइबरसिस्टम्स कॉर्पोरेशन',
-  'مؤسسة نيورامانس للأنظمة السيبرانية',
+  'NEURAMANCE® METALTECH CORPORATION',
+  'NEURAMANCE® METALTECH CORPORATION',
+  '神念金属科技公司',
+  '神念メタルテック株式会社',
+  'न्यूरामैन्स मेटलटेक कॉर्पोरेशन',
+  'مؤسسة نيورامانس للتقنيات المعدنية',
 ];
 
 export function GlitchWordmark() {
