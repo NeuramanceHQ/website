@@ -1,34 +1,80 @@
-import Link from 'next/link';
-import Image from 'next/image';
-import MobileNavMenu from './mobile-nav-menu';
-import { Button } from './ui/button';
+import * as stylex from '@stylexjs/stylex';
 import { Terminal } from 'lucide-react';
+import Image from 'next/image';
+import Link from 'next/link';
+import { ProductsMenu } from '@/components/products-menu';
+import { button } from '@/components/styles';
+import { colors } from '@/lib/tokens.stylex';
 
-
-
-export default function HomepageNav() {
+export function Nav() {
   return (
-    <header className="fixed left-0 right-0 top-0 z-50 flex w-full justify-center border-b bg-secondary px-1 sm:px-2 py-1">
-      <div className="flex w-full items-center justify-between gap-1">
-        <div className="flex items-center gap-0.5 sm:gap-1 min-w-0">
-          <Link href="/" className="shrink-0">
-            <Button size="nav" variant="secondary" className="gap-1 font-mono px-1.5 sm:px-2 sm:pr-2.5">
-              <Image src="/hand.svg" alt="Hand icon" width={10} height={8} className="h-[8px] w-[10px]" />
-              <span className="hidden min-[360px]:inline">Neuramance</span>
-            </Button>
-          </Link>
-          <MobileNavMenu />
-        </div>
-
-        <div className="shrink-0">
-          <Link href="/about">
-            <Button size="nav" variant="secondary" className="gap-1 font-mono">
-              <Terminal className="h-[8px] w-[10px]" />
-              <span className="hidden sm:inline">About/Contact</span>
-            </Button>
-          </Link>
-        </div>
+    <header {...stylex.props(styles.header)}>
+      <div {...stylex.props(styles.group)}>
+        <Link
+          href="/"
+          {...stylex.props(
+            button.base,
+            button.mono,
+            button.compact,
+            styles.fixed,
+          )}
+        >
+          <Image src="/hand.svg" alt="Hand icon" width={10} height={8} />
+          <span {...stylex.props(styles.brand)}>Neuramance</span>
+        </Link>
+        <ProductsMenu />
       </div>
+      <Link
+        href="/about"
+        aria-label="About/Contact"
+        {...stylex.props(button.base, button.mono, styles.fixed)}
+      >
+        <Terminal {...stylex.props(styles.icon)} />
+        <span {...stylex.props(styles.about)}>About/Contact</span>
+      </Link>
     </header>
   );
 }
+
+const styles = stylex.create({
+  header: {
+    position: 'fixed',
+    top: 0,
+    right: 0,
+    left: 0,
+    zIndex: 50,
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: '0.25rem',
+    width: '100%',
+    paddingBlock: '0.25rem',
+    paddingInline: {
+      default: '0.25rem',
+      '@media (min-width: 40rem)': '0.5rem',
+    },
+    backgroundColor: colors.background,
+    borderBottomWidth: 1,
+    borderBottomStyle: 'solid',
+    borderBottomColor: colors.border,
+  },
+  group: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: { default: '0.125rem', '@media (min-width: 40rem)': '0.25rem' },
+    minWidth: 0,
+  },
+  fixed: {
+    flexShrink: 0,
+  },
+  brand: {
+    display: { default: 'none', '@media (min-width: 360px)': 'inline' },
+  },
+  about: {
+    display: { default: 'none', '@media (min-width: 40rem)': 'inline' },
+  },
+  icon: {
+    width: 10,
+    height: 8,
+  },
+});

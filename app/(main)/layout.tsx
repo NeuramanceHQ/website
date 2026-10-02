@@ -1,13 +1,10 @@
-import HomepageNav from '@/components/nav';
-import { Toaster } from '@/components/ui/toaster';
-import '@/styles/global.css';
+import { Nav } from '@/components/nav';
 
-export default function Layout({ children }: { children: React.ReactNode }) {
+export default function Layout({ children }: LayoutProps<'/'>) {
   return (
-    <div className="">
-      <HomepageNav />
+    <>
+      <Nav />
       {children}
-      <Toaster />
-    </div>
+    </>
   );
 }

@@ -1,196 +1,45 @@
-# CLAUDE.md
+<!-- BEGIN:nextjs-agent-rules -->
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+# This is NOT the Next.js you know
 
-## Package Manager
+This version has breaking changes — APIs, conventions, and file structure may all differ from your training data. Read the relevant guide in `node_modules/next/dist/docs/` (resolved from this file's directory; in monorepos the `next` package may not be visible from the repo root) before writing any code. Heed deprecation notices.
 
-**Always use `bun` for this project, never `npm`, `yarn`, or `pnpm`.**
+This block is written and re-added by `next dev` — verify at `node_modules/next/dist/server/lib/generate-agent-files.js`. Removing it from a diff only re-creates the uncommitted change; committing it with your work keeps the tree clean.
 
-## Development Commands
+<!-- END:nextjs-agent-rules -->
 
-- `bun dev` - Start development server
-- `bun run build` - Create production build 
-- `bun run start` - Start production server
-- `bun run lint` - Run ESLint
-- `bun run prettier` - Format code with Prettier
-- `bun run prettier:check` - Check code formatting
-- `bun run seed` - Run database seeding script
+# Neuramance website
 
-## Architecture Overview
+Static marketing site: no backend, database, or auth.
 
-### Next.js App Router Structure
-This is a Next.js 14 application using the App Router with route groups:
+Stack: Next.js 16 App Router with Turbopack, React 19, TypeScript 7, StyleX, Base UI, Bun, Node 24 LTS, Vitest with Testing Library, Playwright, Oxlint, Oxfmt.
 
-- `app/(auth)/` - Authentication pages (login, signup) with shared auth layout
-- `app/(main)/` - Main application pages with main layout
-  - Homepage, account, chat, contact pages
-  - Product pages: deepstrategy, hypercognition, cyberlingua
-  - Waitlist signup functionality
-- `app/auth/` - API routes for authentication callbacks
-- `app/layout.tsx` - Root layout with global providers
+## Commands
 
-### Authentication & Database
-- **Supabase**: Authentication and database with SSR support
-- **Middleware**: Session management via `middleware.ts` for protected routes
-- **Client Pattern**: Singleton Supabase client in `lib/supabase/client.ts` prevents recreation
-- **Server Actions**: Authentication actions in `lib/auth/actions.ts`
+Use Bun only, and run scripts with `bun run` (`bun test` starts Bun's runner, not Vitest).
 
-### Audio System Architecture
-Central audio management system with sophisticated browser compatibility:
+- `bun run dev`: development server
+- `bun run build`, `bun run start`: production build and server
+- `bun run lint`: Oxlint, type-aware, warnings fail
+- `bun run format`, `bun run format:check`: Oxfmt
+- `bun run typecheck`: route types, then `tsc`
+- `bun run test`: Vitest component tests
+- `bun run test:e2e`: Playwright against a fresh production build on port 3100
 
-- **AudioContext**: Global state management in `lib/contexts/AudioContext.tsx`
-- **Dual Audio Support**: Background tracks + overlay sounds (e.g., sound effects)
-- **Browser Detection**: Safari-specific handling in `lib/utils/browser-detection.ts`
-- **Memory Management**: Optimized buffering and cleanup to prevent memory leaks
-- **Autoplay Handling**: Graceful degradation for browser autoplay policies
-- **Performance Optimization**: Audio optimization utilities in `lib/utils/audio-optimization.ts`
-- **Context Management**: Multiple audio context files for complex state scenarios
+Done means `lint`, `format:check`, `typecheck`, `test`, `test:e2e`, and `build` all pass.
 
-### Component Architecture
-- **UI Components**: Radix UI + Tailwind CSS in `components/ui/`
-- **Error Boundaries**: Comprehensive error handling with specialized boundaries
-- **Dynamic Imports**: Performance-optimized lazy loading for large components
-- **Type Safety**: Comprehensive interfaces in `lib/types/components.ts`
+## Layout
 
-### Styling & Typography
-- **Fonts**: Inter Variable (sans-serif) + Berkeley Mono Regular (monospace)
-- **Tailwind**: Custom design system with CSS variables
-- **Font Features**: OpenType features via tailwindcss-opentype plugin
+- `app/layout.tsx`: metadata, fonts (`next/font/local` from `lib/fonts`), JSON-LD, body styles
+- `app/globals.css`: reset inside `@layer resets`, then the `@stylex;` directive where StyleX emits its CSS
+- `app/(main)/`: pages sharing the nav (`/`, `/about`, `/waitlist`, `/error`); `error.tsx` renders the `/error` page as the error boundary
+- `components/`: `nav`, `products-menu` (Base UI Menu), `glitch-wordmark`, `sound-button` (all audio: one shared `Audio` element), `icons`, `styles.ts` (shared StyleX styles)
+- `lib/tokens.stylex.ts`: design constants (`defineConsts`) for colors, fonts, gradients, breakpoints
 
-### Performance Optimizations
-- **Bundle Splitting**: Dynamic imports for route-based and component-based splitting
-- **Image Optimization**: Next.js Image with WebP/AVIF support
-- **Caching**: Comprehensive headers and static asset optimization
-- **Tree Shaking**: Package import optimization in next.config.js
+## Styling
 
-## Environment Requirements
-
-**Node.js**: >= 18.17.0 (see package.json engines)
-
-## Key Dependencies
-
-### Core Framework
-- **Next.js**: 14.2.30 with App Router
-- **React**: 18.2.0 with Server Components
-- **TypeScript**: 5.2.2 for type safety
-
-### Database & Authentication
-- **Supabase**: Primary authentication and database (@supabase/supabase-js, @supabase/ssr)
-- **Vercel Postgres**: Additional database integration (@vercel/postgres)
-- **NextAuth**: Alternative/additional auth system (next-auth)
-
-### UI & Styling
-- **Radix UI**: Comprehensive component library with theming (@radix-ui/themes)
-- **Tailwind CSS**: 4.1.10 with animations and OpenType features
-- **Lucide React**: Icon system
-- **React PowerGlitch**: Visual effects for enhanced UI
-
-### Development Tools
-- **React Hook Form**: 7.58.1 with @hookform/resolvers for form handling
-- **Zod**: 3.25.67 for schema validation
-- **Class Variance Authority**: Component variant management
-- **Framer Motion**: Animation library for UI interactions
-
-## Key File Patterns
-
-### Route Organization
-- Route groups `(auth)` and `(main)` provide layout isolation
-- API routes in `app/auth/` for authentication flows
-- Page components use dynamic imports for performance
-
-### State Management
-- Audio state via React Context (not external state library)
-- Form state via react-hook-form + zod validation
-- Authentication state via Supabase auth helpers
-
-### Component Patterns
-- Error boundaries wrap major application sections
-- Dynamic imports for heavy components (Hero, auth forms)
-- Consistent prop interfaces extending BaseComponentProps
-
-### Security
-- URL validation for redirect prevention in auth flows
-- CSP headers and security policies in next.config.js
-- Production console log removal while preserving errors/warnings
-- Comprehensive logging system via `lib/utils/logger.ts`
-- Secure authentication flow handling with multiple providers
-
-## Audio Implementation Notes
-
-The audio system is complex and handles:
-- Safari autoplay restrictions with user gesture detection
-- Memory optimization with proper cleanup and buffering
-- Overlay audio that pauses/resumes background music
-- Cross-browser compatibility with fallbacks
-
-When working with audio components, always test across browsers, especially Safari.
-
-## Development Tools & Utilities
-
-### Logging System
-- **Production Logger**: `lib/utils/logger.ts` provides structured logging
-- **Audio Optimization**: `lib/utils/audio-optimization.ts` for performance monitoring
-- **Browser Detection**: Enhanced Safari compatibility handling
-
-### Development Directories
-- `docs/optimizations/` - Performance and optimization documentation
-- `lib/hooks/` - Custom React hooks for shared functionality
-- `components/dev/` - Development-only components and utilities
-
-### Custom Hooks
-- Audio management hooks for global state
-- Form validation and submission hooks
-- Browser compatibility detection hooks
-
-## Environment Setup
-
-### Using Vercel CLI for Environment Variables
-
-For local development, use the Vercel CLI to sync environment variables:
-
-1. **Install Vercel CLI**: `bun add -g vercel`
-2. **Link project**: `vercel link` (follow prompts to connect to Vercel project)
-3. **Pull environment variables**: `vercel env pull` (creates/updates `.env.local`)
-
-**Notes**:
-- `vercel dev` automatically downloads environment variables into memory
-- Restart development server after pulling new environment variables
-- Use `NEXT_PUBLIC_` prefix for client-side accessible variables
-
-## UI/UX Implementation Notes
-
-### Focus Ring Management
-The application implements professional-grade focus ring removal (similar to Stripe.com) via global CSS in `styles/global.css`. All focus rings are disabled for both mouse and keyboard interactions to match modern web application standards.
-
-### Dropdown/Menu Components
-When implementing hover dropdowns:
-- Use controlled state with Radix UI components for consistency
-- Device detection via `(hover: hover)` media query to enable hover only on capable devices
-- Avoid conflicting custom animations with Radix UI's built-in animations
-- Include timeout delays (300ms) for smooth mouse interactions
-- Separate hover-triggered vs click-triggered state management
-
-### Component State Patterns
-- Use `useRef` for timeout management and cleanup
-- Implement proper device capability detection for touch vs hover devices
-- Separate event handling logic for different interaction types (mouse, keyboard, touch)
-
-## Security Architecture
-
-### Comprehensive Security Headers
-- **CSP**: Strict Content Security Policy in middleware with Supabase allowlisting
-- **Security Headers**: X-Frame-Options, X-Content-Type-Options, Referrer-Policy
-- **Cookie Security**: Enhanced httpOnly, secure, sameSite cookie handling in middleware
-- **Image Security**: SVG sanitization with CSP sandbox in next.config.js
-
-### Authentication Security
-- **Session Management**: Automatic token refresh via middleware
-- **Route Protection**: Middleware-based session validation for protected routes
-- **Secure Cookies**: Production-optimized cookie settings with proper SameSite handling
-
-## Testing Commands
-
-Currently, the project does not have a dedicated test framework configured. When implementing tests:
-- Check for test framework setup before running tests
-- Consider adding Jest or Vitest for unit testing
-- Use Playwright or Cypress for E2E testing if needed
+- Style with `stylex.create` and `{...stylex.props(...)}`; `app/globals.css` is the only CSS file.
+- StyleX compiles through `babel.config.js` (Turbopack picks it up) and `postcss.config.mjs`; `vitest.config.mjs` reuses the Babel plugins.
+- Spread `stylex.props` onto Base UI parts and target their state attributes with keys such as `':is([data-starting-style])'`.
+- Write line heights in `rem`, not `calc()` ratios, which the CSS minifier rounds.
+- Focus outlines are removed globally on purpose.

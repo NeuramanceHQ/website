@@ -38,11 +38,9 @@ next-env.d.ts
 # vscode
 .vscode/
 
-# Claude Code temporary optimization docs
-OPTIMIZATION_SUMMARY.md
-AUDIO_OPTIMIZATION.md
-docs/optimizations/OPTIMIZATION_SUMMARY.md
-docs/optimizations/AUDIO_OPTIMIZATION.md
-
 # logs
 .logs/
+
+# playwright
+/test-results/
+/playwright-report/
