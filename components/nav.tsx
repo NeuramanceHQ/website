@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { Clock } from '@/components/clock';
 import { cta } from '@/components/styles';
 import { WORDMARK } from '@/lib/logotype';
-import { ACCESS_HREF } from '@/lib/site';
+import { ACCESS_HREF, BACKGROUND_VIDEO_URL } from '@/lib/site';
 import { colors, fonts } from '@/lib/tokens.stylex';
 
 const EXTEND = 2.1;
@@ -38,6 +38,14 @@ export function Nav() {
           On air
           <Clock {...stylex.props(styles.clock)} />
         </p>
+        <a
+          href={BACKGROUND_VIDEO_URL}
+          target="_blank"
+          rel="noopener noreferrer"
+          {...stylex.props(styles.credit)}
+        >
+          Video — yaego, Eye to Eye ↗
+        </a>
         <a
           href={ACCESS_HREF}
           {...stylex.props(cta.base, cta.primary, cta.small, styles.access)}
@@ -96,6 +104,19 @@ const styles = stylex.create({
     lineHeight: 1,
     textTransform: 'uppercase',
     color: colors.muted,
+  },
+  credit: {
+    display: { default: 'none', '@media (min-width: 64rem)': 'inline' },
+    fontFamily: fonts.micro,
+    fontSize: 8,
+    lineHeight: 1,
+    textTransform: 'uppercase',
+    color: colors.muted,
+    textDecorationLine: {
+      default: 'none',
+      '@media (hover: hover)': { default: null, ':hover': 'underline' },
+    },
+    textUnderlineOffset: '0.25em',
   },
   dot: {
     width: 6,

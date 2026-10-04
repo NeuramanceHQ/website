@@ -3,8 +3,7 @@ import * as stylex from '@stylexjs/stylex';
 export const colors = stylex.defineConsts({
   background: '#050506',
   foreground: '#e9edf0',
-  muted: '#9aa0ae',
-  faint: '#777c8c',
+  muted: '#b8bec9',
   line: 'rgb(255 255 255 / 0.08)',
   periwinkle: '#aab6ff',
   frost: '#dbf2f4',

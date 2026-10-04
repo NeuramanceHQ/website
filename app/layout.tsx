@@ -1,6 +1,8 @@
 import * as stylex from '@stylexjs/stylex';
 import type { Metadata, Viewport } from 'next';
 import localFont from 'next/font/local';
+import { VideoBackground } from '@/components/video-background';
+import { BACKGROUND_VIDEO_ID } from '@/lib/site';
 import { colors, fonts } from '@/lib/tokens.stylex';
 import './globals.css';
 
@@ -119,7 +121,10 @@ export default function RootLayout({ children }: LayoutProps<'/'>) {
           dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData) }}
         />
       </head>
-      <body {...stylex.props(styles.body)}>{children}</body>
+      <body {...stylex.props(styles.body)}>
+        <VideoBackground videoId={BACKGROUND_VIDEO_ID} />
+        {children}
+      </body>
     </html>
   );
 }

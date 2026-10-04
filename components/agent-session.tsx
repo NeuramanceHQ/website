@@ -167,7 +167,7 @@ const styles = stylex.create({
     color: colors.neon,
   },
   dim: {
-    color: colors.faint,
+    color: colors.muted,
   },
   value: {
     color: colors.foreground,

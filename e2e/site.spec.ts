@@ -1,5 +1,32 @@
 import { expect, test } from '@playwright/test';
 
+const YOUTUBE =
+  /^https:\/\/([a-z0-9-]+\.)*(youtube|youtube-nocookie|ytimg|googlevideo)\.com\//;
+const IFRAME_API = 'https://www.youtube.com/iframe_api';
+const FAKE_IFRAME_API = `
+window.YT = {
+  Player: class {
+    constructor(element, options) {
+      window.fakePlayer = { options, calls: [] };
+      element.replaceWith(document.createElement('iframe'));
+      window.setPlayerState = (data) =>
+        options.events.onStateChange({ target: this, data });
+      setTimeout(() => options.events.onReady({ target: this }));
+    }
+    mute() { window.fakePlayer.calls.push('mute'); }
+    pauseVideo() { window.fakePlayer.calls.push('pauseVideo'); }
+    playVideo() { window.fakePlayer.calls.push('playVideo'); }
+    unloadModule(name) { window.fakePlayer.calls.push('unloadModule:' + name); }
+    destroy() {}
+  },
+};
+window.onYouTubeIframeAPIReady();
+`;
+
+test.beforeEach(async ({ page }) => {
+  await page.route(YOUTUBE, (route) => route.abort());
+});
+
 test('home page renders its production styles', async ({ page }) => {
   await page.goto('/');
   await expect(page.locator('body')).toHaveCSS(
@@ -352,3 +379,160 @@ for (const { route, text, level } of [
     await expect(content).toBeVisible();
   });
 }
+
+const POSTER = 'https://i.ytimg.com/vi_webp/AA3ixfYtq1g/maxresdefault.webp';
+
+test('background video shows its still frame from the first render and loads the player without blocking rendering', async ({
+  page,
+}) => {
+  await page.route(IFRAME_API, (route) =>
+    route.fulfill({ contentType: 'text/javascript', body: FAKE_IFRAME_API }),
+  );
+  await page.goto('/');
+  await expect(
+    page.locator(`link[rel="preload"][as="image"][href="${POSTER}"]`),
+  ).toHaveCount(1);
+  await expect(page.locator('body > div[aria-hidden] > div').first()).toHaveCSS(
+    'background-image',
+    `url("${POSTER}")`,
+  );
+  await page.waitForFunction(
+    (url) => performance.getEntriesByName(url).length > 0,
+    IFRAME_API,
+  );
+  expect(
+    await page.evaluate(
+      (url) =>
+        (
+          performance.getEntriesByName(url)[0].toJSON() as {
+            renderBlockingStatus: string;
+          }
+        ).renderBlockingStatus,
+      IFRAME_API,
+    ),
+  ).toBe('non-blocking');
+});
+
+test('background video reveals 3.5 s after playback starts, muted and without captions, and hides when playback stops', async ({
+  page,
+}) => {
+  await page.route(IFRAME_API, (route) =>
+    route.fulfill({ contentType: 'text/javascript', body: FAKE_IFRAME_API }),
+  );
+  await page.goto('/');
+  await page.waitForFunction('typeof setPlayerState === "function"');
+  await expect(page.locator('body > div[aria-hidden]').first()).toHaveCSS(
+    'opacity',
+    '0.18',
+  );
+  const player = page.locator('body > div[aria-hidden] > div > div').first();
+  await expect(player).toHaveCSS('opacity', '0');
+  await page.evaluate('setPlayerState(1)');
+  await page.waitForTimeout(3000);
+  expect(
+    await player.evaluate((element) => getComputedStyle(element).opacity),
+  ).toBe('0');
+  await expect(player).toHaveCSS('opacity', '1', { timeout: 3000 });
+  expect(
+    await page.evaluate(
+      '({ videoId: fakePlayer.options.videoId, playerVars: fakePlayer.options.playerVars, calls: fakePlayer.calls })',
+    ),
+  ).toEqual({
+    videoId: 'AA3ixfYtq1g',
+    playerVars: expect.objectContaining({
+      autoplay: 1,
+      mute: 1,
+      controls: 0,
+      loop: 1,
+      playlist: 'AA3ixfYtq1g',
+      playsinline: 1,
+    }),
+    calls: ['mute', 'playVideo', 'unloadModule:captions'],
+  });
+  await page.evaluate('setPlayerState(2)');
+  await expect(player).toHaveCSS('opacity', '0', { timeout: 2000 });
+});
+
+for (const [width, height] of [
+  [1440, 900],
+  [390, 844],
+  [844, 390],
+] as const) {
+  test(`background video's 4:3 picture covers the ${width}x${height} viewport`, async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width, height });
+    await page.goto('/');
+    const frame = await page
+      .locator('body > div[aria-hidden] > div')
+      .first()
+      .boundingBox();
+    if (frame === null) {
+      throw new Error('background frame has no bounding box');
+    }
+    expect(frame.width / frame.height).toBeCloseTo(16 / 9, 2);
+    expect(frame.x + frame.width / 8).toBeLessThanOrEqual(0);
+    expect(frame.x + (frame.width * 7) / 8).toBeGreaterThanOrEqual(width);
+    expect(frame.y).toBeLessThanOrEqual(0);
+    expect(frame.y + frame.height).toBeGreaterThanOrEqual(height);
+  });
+}
+
+test('background video pauses while the tab is hidden and resumes when shown', async ({
+  page,
+}) => {
+  await page.route(IFRAME_API, (route) =>
+    route.fulfill({ contentType: 'text/javascript', body: FAKE_IFRAME_API }),
+  );
+  await page.goto('/');
+  await page.waitForFunction(
+    'typeof fakePlayer === "object" && fakePlayer.calls.includes("playVideo")',
+  );
+  for (const hidden of [true, false]) {
+    await page.evaluate((value) => {
+      Object.defineProperty(document, 'hidden', {
+        configurable: true,
+        get: () => value,
+      });
+      document.dispatchEvent(new Event('visibilitychange'));
+    }, hidden);
+  }
+  expect(await page.evaluate('fakePlayer.calls')).toEqual([
+    'mute',
+    'playVideo',
+    'pauseVideo',
+    'playVideo',
+  ]);
+});
+
+test('reduced motion shows the still frame and loads no video player', async ({
+  page,
+}) => {
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  const requests: string[] = [];
+  page.on('request', (request) => {
+    if (/(youtube|youtube-nocookie|googlevideo)\.com\//.test(request.url())) {
+      requests.push(request.url());
+    }
+  });
+  await page.goto('/');
+  await page.waitForTimeout(3000);
+  expect(requests).toEqual([]);
+  await expect(page.locator('body > div[aria-hidden] > div').first()).toHaveCSS(
+    'background-image',
+    `url("${POSTER}")`,
+  );
+});
+
+test('header credits the background video', async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto('/');
+  const credit = page
+    .getByRole('banner')
+    .getByRole('link', { name: 'Video — yaego, Eye to Eye ↗', exact: true });
+  await expect(credit).toBeVisible();
+  await expect(credit).toHaveAttribute(
+    'href',
+    'https://www.youtube.com/watch?v=AA3ixfYtq1g',
+  );
+});

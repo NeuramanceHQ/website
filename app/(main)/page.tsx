@@ -358,7 +358,7 @@ const styles = stylex.create({
     fontSize: 8,
     lineHeight: 1,
     textTransform: 'uppercase',
-    color: colors.faint,
+    color: colors.muted,
   },
   catalog: {
     display: 'inline-flex',
@@ -414,7 +414,7 @@ const styles = stylex.create({
     fontFamily: fonts.micro,
     fontSize: 8,
     lineHeight: 1,
-    color: colors.faint,
+    color: colors.muted,
   },
   lead: {
     display: { default: 'block', [COMPACT]: 'none' },
@@ -452,7 +452,7 @@ const styles = stylex.create({
     fontSize: 8,
     lineHeight: 1,
     textTransform: 'uppercase',
-    color: colors.faint,
+    color: colors.muted,
     borderTopWidth: 1,
     borderTopStyle: 'solid',
     borderTopColor: colors.line,
