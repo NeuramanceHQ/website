@@ -28,6 +28,5 @@ const styles = stylex.create({
     height: 6,
     borderRadius: '50%',
     backgroundColor: colors.signal,
-    boxShadow: `0 0 6px ${colors.signal}`,
   },
 });

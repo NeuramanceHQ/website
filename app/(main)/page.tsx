@@ -1,18 +1,10 @@
 import * as stylex from '@stylexjs/stylex';
-import { ArrowUpRight, Copy } from 'lucide-react';
+import { ArrowRight, Copy, Grip, Terminal } from 'lucide-react';
 import Link from 'next/link';
 import { CopyButton } from '@/components/copy-button';
-import { GlitchWordmark } from '@/components/glitch-wordmark';
-import { SoundButton } from '@/components/sound-button';
-import { access, accessSize, panel } from '@/components/styles';
-import { WORDMARK } from '@/lib/logotype';
-import { ACCESS_HREF } from '@/lib/site';
-import { clips, colors, fonts } from '@/lib/tokens.stylex';
-
-const AGENT_PROMPT =
-  'Read https://neuramance.com/llms.txt, then draft an email to austin@neuramance.com requesting Neuramance Metaltech beta access, describing the physical parts this project needs.';
-
-const SERVICES = ['CNC machining', 'Sheet metal', 'Laser cutting', 'Finishing'];
+import { button, frame, tag } from '@/components/styles';
+import { ACCESS_HREF, AGENT_PROMPT } from '@/lib/site';
+import { colors, fonts } from '@/lib/tokens.stylex';
 
 const STEPS = [
   {
@@ -29,504 +21,878 @@ const STEPS = [
   },
 ];
 
-const WORDMARK_MASK = `url("data:image/svg+xml,${encodeURIComponent(
-  `<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 ${WORDMARK.width} ${WORDMARK.height}'><path d='${[...WORDMARK.name, ...WORDMARK.division].join('')}'/></svg>`,
-)}")`;
+const SERVICES = [
+  {
+    name: 'CNC machining',
+    detail: 'Milled and turned parts, cut from solid stock.',
+  },
+  { name: 'Sheet metal', detail: 'Bent and formed parts from flat sheet.' },
+  {
+    name: 'Laser cutting',
+    detail: 'Flat profiles cut straight from your drawing.',
+  },
+  {
+    name: 'Finishing',
+    detail: 'Surface treatments applied before the part ships.',
+  },
+];
 
-const SPLIT = '@media (min-width: 40rem) and (min-aspect-ratio: 1 / 1)';
-const COMPACT = '@media (max-height: 46rem)';
-const SHORT = '@media (max-height: 36rem)';
-const TINY = '@media (max-height: 30rem)';
+const FACTS = [
+  ['Agent guide', '/llms.txt'],
+  ['CAD formats', 'STEP · DXF'],
+  ['Quotes return as', 'Structured data'],
+  ['Order status', 'In code'],
+  ['Processes', '4'],
+  ['Access', 'Private beta'],
+  ['Shop', 'Austin, TX'],
+];
+
+const LINE_ITEMS = [
+  ['CNC machining, 6061-T6', '25', '$950.00'],
+  ['Anodize, black', '25', '$150.00'],
+  ['Inspection report', '1', '$45.00'],
+  ['Ground shipping', '1', '$38.00'],
+];
+
+const QUOTE = [
+  ['Material', '6061-T6'],
+  ['Quantity', '25'],
+  ['Lead time', '6 days'],
+  ['Total', '$1,183.00'],
+];
+
+const STATUS = [
+  ['Status', 'Shipped'],
+  ['Inspection', 'Passed'],
+  ['Carrier', 'Ground'],
+  ['Arrives', '10/14/26'],
+];
+
+const SECTION = '@media (min-width: 64rem)';
+const STACK = '@media (max-width: 39.99rem)';
 
 export default function Page() {
   return (
-    <main {...stylex.props(styles.main)}>
-      <div aria-hidden {...stylex.props(styles.grain)} />
-      <div {...stylex.props(styles.caption)}>
-        <span>Fig. 00 — Metal parts for AI agents</span>
-        <span {...stylex.props(styles.wide)}>Est. 2025 — Austin, Texas</span>
-      </div>
-      <h1
-        aria-label="Neuramance® Metaltech Corporation"
-        {...stylex.props(styles.heading)}
-      >
-        <div {...stylex.props(styles.plate)}>
-          <svg
-            aria-hidden
-            viewBox={`0 0 ${WORDMARK.width} ${WORDMARK.height}`}
-            {...stylex.props(styles.logotype)}
-          >
-            <defs>
-              <linearGradient id="steel" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0" stopColor="#ffffff" />
-                <stop offset="0.2" stopColor="#e2ebf4" />
-                <stop offset="0.46" stopColor="#93a6c8" />
-                <stop offset="0.5" stopColor="#1b2756" />
-                <stop offset="0.53" stopColor="#5a6fa8" />
-                <stop offset="0.62" stopColor="#bfdde4" />
-                <stop offset="0.8" stopColor="#f3f8fa" />
-                <stop offset="1" stopColor="#8494b6" />
-              </linearGradient>
-            </defs>
-            {[...WORDMARK.name, ...WORDMARK.division].map((d, index) => (
-              <path
-                key={d}
-                d={d}
-                fill="url(#steel)"
-                {...stylex.props(styles.letter(`${120 + index * 55}ms`))}
-              />
-            ))}
-          </svg>
-          <div aria-hidden {...stylex.props(styles.shine(WORDMARK_MASK))}>
-            <div {...stylex.props(styles.glint)} />
-          </div>
-        </div>
-      </h1>
-      <div {...stylex.props(styles.meta)}>
-        <GlitchWordmark />
-        <p {...stylex.props(styles.beta)}>
-          <span aria-hidden {...stylex.props(styles.led)} />
-          No. 001 — 2026
-        </p>
-      </div>
-      <div {...stylex.props(styles.content)}>
-        <div {...stylex.props(styles.offer)}>
-          <p {...stylex.props(styles.eyebrow)}>
-            Private beta — metal parts for AI agents
+    <main>
+      <div {...stylex.props(styles.hero)}>
+        <div aria-hidden {...stylex.props(styles.dots)} />
+        <div {...stylex.props(frame.base, styles.intro)}>
+          <p {...stylex.props(tag.kicker)}>
+            Metal parts for AI agents
+            <span {...stylex.props(tag.chip)}>Private beta</span>
           </p>
-          <h2 {...stylex.props(styles.headline)}>
-            <span>Your agent sends the CAD file.</span>{' '}
-            <span {...stylex.props(styles.second)}>
-              We ship the metal part.
-            </span>
-          </h2>
+          <h1 {...stylex.props(styles.title)}>
+            <span {...stylex.props(styles.line)}>
+              Your agent sends the CAD file.
+            </span>{' '}
+            <span {...stylex.props(styles.line)}>We ship the metal part.</span>
+          </h1>
           <p {...stylex.props(styles.lead)}>
-            Claude Code, Codex, or any AI agent quotes, orders, and tracks real
-            fabrication in code.
+            CNC machining, sheet metal, laser cutting, and finishing, ordered by
+            your agent in code.
           </p>
-          <ul {...stylex.props(styles.services)}>
-            {SERVICES.map((service, index) => (
-              <li key={service} {...stylex.props(styles.service)}>
-                <span aria-hidden {...stylex.props(styles.number)}>
-                  {String(index + 1).padStart(2, '0')}
-                </span>
-                <span>{service}</span>
-              </li>
-            ))}
-          </ul>
-          <div {...stylex.props(styles.actions)}>
-            <a
-              href={ACCESS_HREF}
+          <div {...stylex.props(styles.form)}>
+            <p {...stylex.props(styles.field)}>
+              <Terminal aria-hidden {...stylex.props(styles.fieldIcon)} />
+              <span {...stylex.props(styles.fieldText)}>{AGENT_PROMPT}</span>
+            </p>
+            <CopyButton
+              text={AGENT_PROMPT}
               {...stylex.props(
-                stylex.defaultMarker(),
-                access.link,
-                accessSize.large,
+                button.base,
+                button.lime,
+                button.large,
+                styles.submit,
               )}
             >
-              <span aria-hidden {...stylex.props(access.swatches)} />
-              <span aria-hidden {...stylex.props(access.note)}>
-                Private beta
-              </span>
-              <span>Request access</span>
-              <span aria-hidden {...stylex.props(access.arrow)}>
-                <ArrowUpRight {...stylex.props(access.glyph)} />
-              </span>
-            </a>
-            <CopyButton text={AGENT_PROMPT} {...stylex.props(styles.copy)}>
-              <Copy aria-hidden {...stylex.props(styles.icon)} />
+              <Copy aria-hidden {...stylex.props(button.icon)} />
               Copy agent prompt
             </CopyButton>
           </div>
+          <p {...stylex.props(styles.note)}>
+            Paste it into Claude Code, Codex, or any agent. It drafts your
+            access request.
+          </p>
         </div>
-        <section
-          aria-label="How it works"
-          {...stylex.props(panel.card, styles.steps)}
-        >
-          <p {...stylex.props(panel.label)}>How it works</p>
-          <ol {...stylex.props(styles.list)}>
-            {STEPS.map((step, index) => (
-              <li key={step.title} {...stylex.props(styles.step)}>
-                <span aria-hidden {...stylex.props(styles.stepNumber)}>
-                  {String(index + 1).padStart(2, '0')}
-                </span>
-                <span {...stylex.props(styles.stepText)}>
-                  <span {...stylex.props(styles.stepTitle)}>{step.title}</span>
-                  <span {...stylex.props(styles.stepDetail)}>
-                    {step.detail}
+        <div {...stylex.props(frame.base)}>
+          <div aria-hidden {...stylex.props(styles.showcase)}>
+            <div {...stylex.props(styles.stage)}>
+              <div {...stylex.props(styles.document)}>
+                <div {...stylex.props(styles.documentHead)}>
+                  <span {...stylex.props(styles.cardLabel)}>Quote</span>
+                  <span {...stylex.props(styles.mono)}>Q-1384</span>
+                </div>
+                <p {...stylex.props(styles.documentTitle)}>Bracket, rev. 3</p>
+                <div {...stylex.props(styles.parties)}>
+                  <div>
+                    <p {...stylex.props(styles.small)}>Requested by:</p>
+                    <p {...stylex.props(styles.faint)}>Claude Code</p>
+                    <p {...stylex.props(styles.faint)}>via llms.txt</p>
+                  </div>
+                  <dl {...stylex.props(styles.details)}>
+                    <dt>Issued</dt>
+                    <dd>10/04/26</dd>
+                    <dt>Lead time</dt>
+                    <dd>6 days</dd>
+                    <dt>Valid</dt>
+                    <dd>30 days</dd>
+                  </dl>
+                </div>
+                <div {...stylex.props(styles.table)}>
+                  <span {...stylex.props(styles.columnHead)}>Description</span>
+                  <span {...stylex.props(styles.columnHead, styles.end)}>
+                    Qty
                   </span>
-                </span>
-              </li>
-            ))}
-          </ol>
-        </section>
+                  <span {...stylex.props(styles.columnHead, styles.end)}>
+                    Amount
+                  </span>
+                  {LINE_ITEMS.map(([description, quantity, amount]) => (
+                    <div key={description} {...stylex.props(styles.row)}>
+                      <span>{description}</span>
+                      <span {...stylex.props(styles.end, styles.mono)}>
+                        {quantity}
+                      </span>
+                      <span {...stylex.props(styles.end, styles.mono)}>
+                        {amount}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+                <dl {...stylex.props(styles.totals)}>
+                  <dt>Subtotal</dt>
+                  <dd {...stylex.props(styles.mono)}>$1,183.00</dd>
+                  <dt>Total due</dt>
+                  <dd {...stylex.props(styles.mono, styles.total)}>
+                    $1,183.00
+                  </dd>
+                </dl>
+              </div>
+              <div {...stylex.props(styles.card, styles.files)}>
+                <p {...stylex.props(styles.cardLabel)}>File received</p>
+                <div {...stylex.props(styles.tiles)}>
+                  <div {...stylex.props(styles.tile)}>
+                    <span {...stylex.props(styles.badge)}>STEP</span>
+                    <svg viewBox="0 0 120 72" {...stylex.props(styles.drawing)}>
+                      <path d="M16 8h12v44h76v12H16z" />
+                      <path
+                        d="M8 24h28M72 44v28"
+                        {...stylex.props(styles.hidden)}
+                      />
+                    </svg>
+                    <span {...stylex.props(styles.mono)}>bracket-v3</span>
+                  </div>
+                  <span {...stylex.props(styles.ellipsis)}>···</span>
+                  <div {...stylex.props(styles.tile)}>
+                    <span {...stylex.props(styles.badge)}>DXF</span>
+                    <svg viewBox="0 0 120 72" {...stylex.props(styles.drawing)}>
+                      <path d="M10 14h100v44H10z" />
+                      <circle cx="27" cy="36" r="5" />
+                      <circle cx="77" cy="36" r="5" />
+                      <path d="M44 14v44" {...stylex.props(styles.hidden)} />
+                    </svg>
+                    <span {...stylex.props(styles.mono)}>bracket-v3</span>
+                  </div>
+                </div>
+              </div>
+              <div {...stylex.props(styles.card, styles.quote)}>
+                <p {...stylex.props(styles.cardLabel)}>
+                  Quote ready
+                  <span {...stylex.props(styles.dot)} />
+                </p>
+                <dl {...stylex.props(styles.pairs)}>
+                  {QUOTE.map(([term, value]) => (
+                    <div
+                      key={term}
+                      {...stylex.props(
+                        styles.pair,
+                        term === 'Lead time' && styles.flagged,
+                      )}
+                    >
+                      <dt>{term}</dt>
+                      <dd {...stylex.props(styles.mono)}>{value}</dd>
+                    </div>
+                  ))}
+                </dl>
+              </div>
+              <div {...stylex.props(styles.card, styles.status)}>
+                <p {...stylex.props(styles.cardLabel)}>Order status</p>
+                <dl {...stylex.props(styles.fields)}>
+                  {STATUS.map(([term, value]) => (
+                    <div key={term} {...stylex.props(styles.fieldGroup)}>
+                      <dt {...stylex.props(styles.small)}>{term}</dt>
+                      <dd {...stylex.props(styles.input)}>{value}</dd>
+                    </div>
+                  ))}
+                </dl>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div {...stylex.props(styles.ticker)}>
+          <div {...stylex.props(frame.base, styles.tickerRow)}>
+            <Grip aria-hidden {...stylex.props(styles.glyph)} />
+            <ul {...stylex.props(styles.facts)}>
+              {FACTS.map(([label, value]) => (
+                <li key={label} {...stylex.props(styles.fact)}>
+                  {label}:<span {...stylex.props(tag.chip)}>{value}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        </div>
       </div>
-      <footer {...stylex.props(styles.footer)}>
-        <span>www.neuramance.com</span>
-        <Link href="/llms.txt" prefetch={false} {...stylex.props(styles.link)}>
-          For agents: /llms.txt
-        </Link>
-        <SoundButton
-          sound="/audio/dune1-intro.mp3"
-          aria-label="Play audio quote"
-          {...stylex.props(styles.quote)}
-        >
-          A company&apos;s excellence is conveyed in everything it does.
-        </SoundButton>
-        <span {...stylex.props(styles.wide)}>30.27°N 97.74°W</span>
-      </footer>
+
+      <section
+        id="how-it-works"
+        aria-labelledby="how-it-works-title"
+        {...stylex.props(frame.base, styles.section)}
+      >
+        <div {...stylex.props(styles.head)}>
+          <p {...stylex.props(tag.kicker)}>How it works</p>
+          <h2 id="how-it-works-title" {...stylex.props(styles.heading)}>
+            From CAD file to metal part, without leaving the terminal.
+          </h2>
+        </div>
+        <ol {...stylex.props(styles.steps)}>
+          {STEPS.map((step, index) => (
+            <li key={step.title} {...stylex.props(styles.step)}>
+              <span {...stylex.props(tag.chip, styles.number)}>
+                {String(index + 1).padStart(2, '0')}
+              </span>
+              <h3 {...stylex.props(styles.stepTitle)}>{step.title}</h3>
+              <p {...stylex.props(styles.body)}>{step.detail}</p>
+            </li>
+          ))}
+        </ol>
+      </section>
+
+      <section
+        id="services"
+        aria-labelledby="services-title"
+        {...stylex.props(frame.base, styles.section)}
+      >
+        <div {...stylex.props(styles.head)}>
+          <p {...stylex.props(tag.kicker)}>Services</p>
+          <h2 id="services-title" {...stylex.props(styles.heading)}>
+            Four processes. One order flow.
+          </h2>
+        </div>
+        <ul {...stylex.props(styles.services)}>
+          {SERVICES.map((service) => (
+            <li key={service.name} {...stylex.props(styles.service)}>
+              <h3 {...stylex.props(styles.serviceName)}>{service.name}</h3>
+              <p {...stylex.props(styles.body)}>{service.detail}</p>
+            </li>
+          ))}
+        </ul>
+      </section>
+
+      <section
+        id="agents"
+        aria-labelledby="agents-title"
+        {...stylex.props(frame.base, styles.section, styles.agents)}
+      >
+        <div {...stylex.props(styles.head)}>
+          <p {...stylex.props(tag.kicker)}>For agents</p>
+          <h2 id="agents-title" {...stylex.props(styles.heading)}>
+            Your agent already knows how to order.
+          </h2>
+          <p {...stylex.props(styles.body)}>
+            Point Claude Code, Codex, or any AI agent at
+            neuramance.com/llms.txt. It reads the guide, then drafts an access
+            request describing the parts your project needs.
+          </p>
+          <Link
+            href="/llms.txt"
+            prefetch={false}
+            {...stylex.props(styles.more)}
+          >
+            Read llms.txt
+            <ArrowRight aria-hidden {...stylex.props(button.icon)} />
+          </Link>
+        </div>
+        <div {...stylex.props(styles.prompt)}>
+          <div {...stylex.props(styles.promptHead)}>
+            <span {...stylex.props(styles.cardLabel)}>Agent prompt</span>
+            <CopyButton
+              text={AGENT_PROMPT}
+              {...stylex.props(button.base, button.light, button.small)}
+            >
+              <Copy aria-hidden {...stylex.props(button.icon)} />
+              Copy agent prompt
+            </CopyButton>
+          </div>
+          <p {...stylex.props(styles.promptText)}>{AGENT_PROMPT}</p>
+        </div>
+      </section>
+
+      <section
+        aria-labelledby="closing-title"
+        {...stylex.props(frame.base, styles.closingFrame)}
+      >
+        <div {...stylex.props(styles.closing)}>
+          <h2 id="closing-title" {...stylex.props(styles.closingTitle)}>
+            Give your agent hands.
+          </h2>
+          <p {...stylex.props(styles.lead)}>
+            Neuramance is in private beta. Tell us what you&apos;re building.
+          </p>
+          <div {...stylex.props(styles.actions)}>
+            <CopyButton
+              text={AGENT_PROMPT}
+              {...stylex.props(button.base, button.lime, button.large)}
+            >
+              Copy agent prompt
+            </CopyButton>
+            <a
+              href={ACCESS_HREF}
+              {...stylex.props(button.base, button.light, button.large)}
+            >
+              Request access
+            </a>
+          </div>
+        </div>
+      </section>
     </main>
   );
 }
 
-const powerOn = stylex.keyframes({
-  '0%': { opacity: 0 },
-  '30%': { opacity: 0.7 },
-  '45%': { opacity: 0.15 },
-  '70%': { opacity: 1 },
-  '82%': { opacity: 0.6 },
-  '100%': { opacity: 1 },
-});
-
-const glow = stylex.keyframes({ '50%': { opacity: 0.45 } });
-
-const sweep = stylex.keyframes({
-  '0%': { transform: 'translateX(-110%)' },
-  '22%, 100%': { transform: 'translateX(470%)' },
-});
+const DOT_GRID =
+  'radial-gradient(circle at 1px 1px, rgb(255 255 255 / 0.16) 1px, transparent 0)';
+const HANDLE = `linear-gradient(${colors.foreground}, ${colors.foreground})`;
 
 const styles = stylex.create({
-  main: {
+  hero: {
     position: 'relative',
-    display: 'flex',
-    flexDirection: 'column',
-    gap: { default: '0.75rem', [SPLIT]: '1rem' },
-    width: '100%',
-    maxWidth: '120rem',
-    height: '100%',
-    marginInline: 'auto',
-    overflowX: 'clip',
-    overflowY: 'auto',
-    paddingTop: { default: '0.875rem', [SPLIT]: '1.25rem' },
-    paddingBottom: '0.75rem',
-    paddingInline: { default: '1rem', '@media (min-width: 48rem)': '2rem' },
-    backgroundImage:
-      'radial-gradient(55% 45% at 30% 72%, rgb(54 70 217 / 0.14), transparent 70%)',
+    isolation: 'isolate',
   },
-  grain: {
-    position: 'fixed',
-    top: 0,
-    left: 0,
-    width: '100%',
-    height: '100%',
-    pointerEvents: 'none',
-    opacity: 0.05,
-    backgroundImage:
-      "url(\"data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='220' height='220'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 0 0 0 1.6 0'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>\")",
-  },
-  caption: {
-    display: { default: 'flex', [COMPACT]: 'none' },
-    justifyContent: 'space-between',
-    gap: '1rem',
-    fontFamily: fonts.micro,
-    fontSize: 8,
-    lineHeight: 1,
-    textTransform: 'uppercase',
-    color: colors.muted,
-  },
-  wide: {
-    display: { default: 'none', '@media (min-width: 40rem)': 'inline' },
-  },
-  heading: {
-    display: 'flex',
-  },
-  plate: {
-    position: 'relative',
-    width: 'clamp(16rem, (100dvh - 12.5rem) * 2.8, 100%)',
-  },
-  logotype: {
-    display: 'block',
-    width: '100%',
-    height: 'auto',
-    overflow: 'visible',
-    filter:
-      'drop-shadow(0 1px 0 rgb(0 0 0 / 0.9)) drop-shadow(0 0 28px rgb(165 207 216 / 0.16))',
-  },
-  shine: (mask: string) => ({
+  dots: {
     position: 'absolute',
     top: 0,
     left: 0,
+    zIndex: -1,
     width: '100%',
     height: '100%',
-    overflow: 'hidden',
-    pointerEvents: 'none',
-    maskImage: mask,
-    maskSize: '100% 100%',
-    maskRepeat: 'no-repeat',
-  }),
-  glint: {
-    width: '22%',
-    height: '100%',
-    transform: 'translateX(-110%)',
-    mixBlendMode: 'screen',
-    backgroundImage:
-      'linear-gradient(105deg, transparent 20%, rgb(255 255 255 / 0.15) 40%, rgb(255 255 255 / 0.95) 50%, rgb(219 242 244 / 0.15) 60%, transparent 80%)',
-    animationName: sweep,
-    animationDuration: '7s',
-    animationDelay: '1.4s',
-    animationTimingFunction: 'cubic-bezier(0.45, 0, 0.2, 1)',
-    animationIterationCount: 'infinite',
-    animationFillMode: 'both',
+    backgroundImage: DOT_GRID,
+    backgroundSize: '18px 18px',
+    maskImage: 'linear-gradient(to bottom, black, black 35%, transparent 75%)',
   },
-  letter: (delay: string) => ({
-    animationName: powerOn,
-    animationDuration: '560ms',
-    animationDelay: delay,
-    animationTimingFunction: 'steps(1, end)',
-    animationFillMode: 'both',
-  }),
-  meta: {
-    display: { default: 'flex', [SHORT]: 'none' },
+  intro: {
+    display: 'flex',
+    flexDirection: 'column',
+    alignItems: 'flex-start',
+    paddingTop: { default: '3.5rem', [SECTION]: '4.5rem' },
+    paddingBottom: { default: '3rem', [SECTION]: '3.5rem' },
+  },
+  title: {
+    marginTop: '1.5rem',
+    fontSize: 'clamp(2.5rem, 6vw, 4.75rem)',
+    fontWeight: 500,
+    lineHeight: 1.02,
+    letterSpacing: '-0.032em',
+    textWrap: 'balance',
+    color: colors.foreground,
+  },
+  line: {
+    display: { default: 'inline', [SECTION]: 'block' },
+  },
+  lead: {
+    marginTop: '1.25rem',
+    maxWidth: '62rem',
+    fontSize: 'clamp(1.125rem, 2vw, 1.5rem)',
+    lineHeight: 1.4,
+    letterSpacing: '-0.01em',
+    color: colors.muted,
+  },
+  form: {
+    display: 'flex',
+    flexDirection: { default: 'row', [STACK]: 'column' },
+    gap: '0.375rem',
+    width: '100%',
+    maxWidth: '44rem',
+    marginTop: '2rem',
+    padding: '0.375rem',
+    borderRadius: 14,
+    borderWidth: 1,
+    borderStyle: 'solid',
+    borderColor: 'rgb(255 255 255 / 0.14)',
+    backgroundColor: 'rgb(255 255 255 / 0.05)',
+  },
+  field: {
+    display: 'flex',
+    flexGrow: 1,
     alignItems: 'center',
+    gap: '0.75rem',
+    minWidth: 0,
+    minHeight: 56,
+    paddingInline: '1.125rem',
+    fontFamily: fonts.mono,
+    fontSize: 15,
+    color: colors.muted,
+  },
+  fieldIcon: {
+    flexShrink: 0,
+    width: 18,
+    height: 18,
+    color: colors.faint,
+  },
+  fieldText: {
+    overflow: 'hidden',
+    whiteSpace: 'nowrap',
+    maskImage: 'linear-gradient(to right, black 70%, transparent)',
+  },
+  submit: {
+    borderRadius: 10,
+  },
+  note: {
+    marginTop: '1rem',
+    fontSize: 15,
+    lineHeight: '1.375rem',
+    color: colors.muted,
+  },
+  showcase: {
+    display: 'flex',
+    justifyContent: 'center',
+    overflow: 'hidden',
+    borderTopLeftRadius: 16,
+    borderTopRightRadius: 16,
+    borderWidth: 1,
+    borderBottomWidth: 0,
+    borderStyle: 'solid',
+    borderColor: 'rgb(255 255 255 / 0.12)',
+    backgroundColor: 'rgb(14 14 16 / 0.8)',
+    backdropFilter: 'blur(12px)',
+    userSelect: 'none',
+  },
+  stage: {
+    position: 'relative',
+    flexShrink: 0,
+    width: 1000,
+    height: 560,
+    zoom: {
+      default: 0.9,
+      '@media (min-width: 48rem)': 0.7,
+      [SECTION]: 0.9,
+      '@media (min-width: 80rem)': 1.15,
+    },
+    fontSize: 12,
+    lineHeight: '1rem',
+    color: colors.foreground,
+  },
+  document: {
+    position: 'absolute',
+    top: 44,
+    left: 345,
+    display: 'flex',
+    flexDirection: 'column',
+    gap: 22,
+    width: 340,
+    height: 600,
+    padding: 24,
+    backgroundColor: colors.card,
+    borderWidth: 1,
+    borderStyle: 'solid',
+    borderColor: colors.line,
+  },
+  documentHead: {
+    display: 'flex',
     justifyContent: 'space-between',
-    gap: '1rem',
-    paddingTop: '0.625rem',
+  },
+  documentTitle: {
+    paddingBottom: 16,
+    fontSize: 20,
+    lineHeight: '1.5rem',
+    letterSpacing: '-0.02em',
+    borderBottomWidth: 1,
+    borderBottomStyle: 'solid',
+    borderBottomColor: colors.line,
+  },
+  parties: {
+    display: 'flex',
+    justifyContent: 'space-between',
+    gap: 16,
+  },
+  details: {
+    display: 'grid',
+    gridTemplateColumns: 'auto auto',
+    columnGap: 16,
+    color: colors.faint,
+  },
+  small: {
+    marginBottom: 4,
+    fontSize: 11,
+    color: colors.muted,
+  },
+  faint: {
+    color: colors.faint,
+  },
+  table: {
+    display: 'grid',
+    gridTemplateColumns: '1fr auto 72px',
+    columnGap: 16,
+  },
+  columnHead: {
+    paddingBottom: 10,
+    fontSize: 11,
+    color: colors.faint,
+  },
+  row: {
+    display: 'grid',
+    gridColumnStart: 1,
+    gridColumnEnd: -1,
+    gridTemplateColumns: 'subgrid',
+    paddingBlock: 10,
     borderTopWidth: 1,
     borderTopStyle: 'solid',
     borderTopColor: colors.line,
   },
-  beta: {
-    display: { default: 'none', '@media (min-width: 40rem)': 'flex' },
-    flexShrink: 0,
-    alignItems: 'center',
-    gap: '0.5rem',
-    fontFamily: fonts.micro,
-    fontSize: 8,
-    lineHeight: 1,
-    textTransform: 'uppercase',
-    color: colors.ice,
+  end: {
+    textAlign: 'end',
   },
-  led: {
+  mono: {
+    fontFamily: fonts.mono,
+    fontSize: 11,
+  },
+  totals: {
+    display: 'grid',
+    gridTemplateColumns: 'auto 88px',
+    justifyContent: 'end',
+    columnGap: 16,
+    rowGap: 6,
+    color: colors.muted,
+    textAlign: 'end',
+  },
+  total: {
+    fontSize: 13,
+    color: colors.foreground,
+  },
+  card: {
+    position: 'absolute',
+    display: { default: 'none', '@media (min-width: 48rem)': 'flex' },
+    flexDirection: 'column',
+    gap: 16,
+    padding: 18,
+    backgroundColor: colors.card,
+    borderWidth: 1,
+    borderStyle: 'solid',
+    borderColor: 'rgb(255 255 255 / 0.18)',
+    '::after': {
+      content: '""',
+      position: 'absolute',
+      top: -3,
+      right: -3,
+      bottom: -3,
+      left: -3,
+      pointerEvents: 'none',
+      backgroundImage: `${HANDLE}, ${HANDLE}, ${HANDLE}, ${HANDLE}`,
+      backgroundPosition: 'top left, top right, bottom left, bottom right',
+      backgroundSize: '5px 5px',
+      backgroundRepeat: 'no-repeat',
+    },
+  },
+  cardLabel: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: 8,
+    fontSize: 11,
+    fontWeight: 500,
+    letterSpacing: '0.04em',
+    textTransform: 'uppercase',
+  },
+  dot: {
     width: 6,
     height: 6,
     borderRadius: '50%',
-    backgroundColor: colors.neon,
-    boxShadow: `0 0 6px ${colors.neon}, 0 0 12px rgb(157 255 214 / 0.5)`,
-    animationName: glow,
-    animationDuration: '2.8s',
-    animationTimingFunction: 'ease-in-out',
-    animationIterationCount: 'infinite',
+    backgroundColor: colors.lime,
   },
-  content: {
-    display: 'grid',
-    gridTemplateColumns: {
-      default: 'minmax(0, 1fr)',
-      [SPLIT]: 'minmax(0, 1fr) minmax(16rem, 24rem)',
-      [SHORT]: 'minmax(0, 1fr)',
-    },
+  files: {
+    top: 68,
+    left: 48,
+    width: 306,
+  },
+  tiles: {
+    display: 'flex',
     alignItems: 'center',
-    columnGap: { default: '2rem', '@media (min-width: 80rem)': '4rem' },
-    flexGrow: 1,
-    flexBasis: 0,
-    minHeight: 0,
+    gap: 10,
   },
-  offer: {
+  tile: {
     display: 'flex',
     flexDirection: 'column',
-    alignItems: {
-      default: 'center',
-      [SPLIT]: 'flex-start',
-    },
-    gap: { default: '0.9rem', [SPLIT]: '1.25rem', [COMPACT]: '0.9rem' },
-    minWidth: 0,
-    textAlign: { default: 'center', [SPLIT]: 'start' },
+    gap: 10,
+    width: 116,
+    padding: 10,
+    color: colors.muted,
+    borderWidth: 1,
+    borderStyle: 'solid',
+    borderColor: colors.line,
   },
-  eyebrow: {
-    fontFamily: fonts.micro,
-    fontSize: 8,
-    lineHeight: 1,
+  badge: {
+    alignSelf: 'flex-start',
+    paddingInline: 5,
+    fontFamily: fonts.mono,
+    fontSize: 10,
+    color: colors.foreground,
+    backgroundColor: 'rgb(255 255 255 / 0.08)',
+  },
+  drawing: {
+    width: '100%',
+    height: 'auto',
+    fill: 'none',
+    stroke: 'currentColor',
+    strokeWidth: 1.25,
+  },
+  hidden: {
+    strokeDasharray: '3 3',
+    opacity: 0.6,
+  },
+  ellipsis: {
+    color: colors.faint,
+  },
+  quote: {
+    top: 112,
+    left: 726,
+    width: 226,
+  },
+  pairs: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: 10,
+  },
+  pair: {
+    display: 'flex',
+    justifyContent: 'space-between',
+    color: colors.muted,
+  },
+  flagged: {
+    color: colors.lime,
+  },
+  status: {
+    top: 340,
+    left: 612,
+    width: 330,
+  },
+  fields: {
+    display: 'grid',
+    gridTemplateColumns: '1fr 1fr',
+    gap: 12,
+  },
+  fieldGroup: {
+    display: 'flex',
+    flexDirection: 'column',
+  },
+  input: {
+    paddingBlock: 9,
+    paddingInline: 12,
+    color: colors.muted,
+    borderWidth: 1,
+    borderStyle: 'solid',
+    borderColor: colors.line,
+  },
+  ticker: {
+    position: 'sticky',
+    bottom: 0,
+    zIndex: 5,
+    backgroundColor: 'rgb(5 5 6 / 0.82)',
+    backdropFilter: 'blur(16px)',
+    borderTopWidth: 1,
+    borderTopStyle: 'solid',
+    borderTopColor: colors.line,
+  },
+  tickerRow: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '1rem',
+    height: 56,
+  },
+  glyph: {
+    flexShrink: 0,
+    width: 18,
+    height: 18,
+    color: colors.faint,
+  },
+  facts: {
+    display: 'flex',
+    alignItems: 'center',
+    overflowX: 'auto',
+    scrollbarWidth: 'none',
+    listStyleType: 'none',
+    maskImage: 'linear-gradient(to right, black 85%, transparent)',
+  },
+  fact: {
+    display: 'flex',
+    flexShrink: 0,
+    alignItems: 'center',
+    gap: '0.625rem',
+    paddingRight: '1.25rem',
+    fontSize: 13,
+    fontWeight: 500,
+    letterSpacing: '0.04em',
     textTransform: 'uppercase',
-    color: colors.ice,
+    whiteSpace: 'nowrap',
+    color: colors.muted,
+    borderLeftWidth: { default: 1, ':first-child': 0 },
+    borderLeftStyle: 'solid',
+    borderLeftColor: colors.line,
+    paddingLeft: { default: '1.25rem', ':first-child': 0 },
   },
-  headline: {
-    fontFamily: fonts.display,
-    fontSize: {
-      default: 'clamp(1.25rem, 6.2vw, 2rem)',
-      [SPLIT]: 'clamp(1.25rem, min(3.4vw, 5.2dvh), 3.25rem)',
-    },
+  section: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '3rem',
+    paddingBlock: { default: '4rem', [SECTION]: '6rem' },
+    scrollMarginTop: 64,
+  },
+  head: {
+    display: 'flex',
+    flexDirection: 'column',
+    alignItems: 'flex-start',
+    gap: '1.25rem',
+    maxWidth: '46rem',
+  },
+  heading: {
+    fontSize: 'clamp(2rem, 4.2vw, 3.5rem)',
+    fontWeight: 500,
     lineHeight: 1.05,
-    letterSpacing: '0.01em',
-    textTransform: 'uppercase',
+    letterSpacing: '-0.028em',
     textWrap: 'balance',
     color: colors.foreground,
   },
-  second: {
-    display: 'block',
-    color: colors.ice,
-  },
-  lead: {
-    display: { default: 'block', [COMPACT]: 'none' },
-    maxWidth: '34rem',
-    fontFamily: fonts.display,
-    fontSize: { default: 14, [SPLIT]: 15 },
-    lineHeight: 1.5,
+  body: {
+    fontSize: 17,
+    lineHeight: '1.625rem',
     color: colors.muted,
   },
-  services: {
-    display: { default: 'flex', [SHORT]: 'none' },
-    flexWrap: 'wrap',
-    justifyContent: { default: 'center', [SPLIT]: 'flex-start' },
-    gap: '0.375rem',
+  steps: {
+    display: 'grid',
+    gridTemplateColumns: {
+      default: 'minmax(0, 1fr)',
+      '@media (min-width: 48rem)': 'repeat(3, minmax(0, 1fr))',
+    },
+    columnGap: '2rem',
+    rowGap: '2.5rem',
     listStyleType: 'none',
   },
-  service: {
-    display: 'inline-flex',
-    alignItems: 'baseline',
-    gap: '0.45rem',
-    paddingBlock: '0.35rem',
-    paddingInline: '0.7rem',
-    fontFamily: fonts.display,
-    fontSize: 12,
-    lineHeight: 1,
-    letterSpacing: '0.08em',
-    textTransform: 'uppercase',
-    color: colors.foreground,
-    backgroundImage:
-      'linear-gradient(180deg, rgb(255 255 255 / 0.08), rgb(255 255 255 / 0.02))',
-    boxShadow: 'inset 0 0 0 1px rgb(255 255 255 / 0.12)',
+  step: {
+    display: 'flex',
+    flexDirection: 'column',
+    alignItems: 'flex-start',
+    gap: '0.75rem',
+    paddingTop: '1.5rem',
+    borderTopWidth: 1,
+    borderTopStyle: 'solid',
+    borderTopColor: colors.line,
   },
   number: {
-    fontFamily: fonts.micro,
-    fontSize: 8,
-    color: colors.ice,
+    marginBottom: '1rem',
+  },
+  stepTitle: {
+    fontSize: 22,
+    fontWeight: 500,
+    lineHeight: '1.75rem',
+    letterSpacing: '-0.02em',
+    color: colors.foreground,
+  },
+  services: {
+    listStyleType: 'none',
+    borderBottomWidth: 1,
+    borderBottomStyle: 'solid',
+    borderBottomColor: colors.line,
+  },
+  service: {
+    display: 'grid',
+    gridTemplateColumns: {
+      default: 'minmax(0, 1fr)',
+      [SECTION]: 'minmax(0, 1fr) minmax(0, 1fr)',
+    },
+    alignItems: 'baseline',
+    columnGap: '1.5rem',
+    rowGap: '0.5rem',
+    paddingBlock: '1.75rem',
+    borderTopWidth: 1,
+    borderTopStyle: 'solid',
+    borderTopColor: colors.line,
+  },
+  serviceName: {
+    fontSize: 'clamp(1.5rem, 2.6vw, 2.25rem)',
+    fontWeight: 500,
+    lineHeight: 1.1,
+    letterSpacing: '-0.022em',
+    color: colors.foreground,
+  },
+  agents: {
+    display: 'grid',
+    gridTemplateColumns: {
+      default: 'minmax(0, 1fr)',
+      [SECTION]: 'minmax(0, 1fr) minmax(0, 1fr)',
+    },
+    alignItems: 'center',
+    columnGap: '4rem',
+  },
+  more: {
+    display: 'inline-flex',
+    alignItems: 'center',
+    gap: '0.5rem',
+    fontSize: 17,
+    fontWeight: 500,
+    color: colors.foreground,
+    textDecorationLine: 'underline',
+    textDecorationColor: colors.faint,
+    textUnderlineOffset: '0.25em',
+  },
+  prompt: {
+    display: 'flex',
+    flexDirection: 'column',
+    borderRadius: 16,
+    borderWidth: 1,
+    borderStyle: 'solid',
+    borderColor: colors.line,
+    backgroundColor: 'rgb(13 13 15 / 0.8)',
+    overflow: 'hidden',
+  },
+  promptHead: {
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: '1rem',
+    paddingBlock: '0.75rem',
+    paddingLeft: '1.25rem',
+    paddingRight: '0.75rem',
+    color: colors.muted,
+    borderBottomWidth: 1,
+    borderBottomStyle: 'solid',
+    borderBottomColor: colors.line,
+  },
+  promptText: {
+    paddingBlock: '1.5rem',
+    paddingInline: '1.25rem',
+    fontFamily: fonts.mono,
+    fontSize: 15,
+    lineHeight: '1.625rem',
+    color: colors.foreground,
+  },
+  closingFrame: {
+    paddingBottom: { default: '5rem', [SECTION]: '8rem' },
+  },
+  closing: {
+    display: 'flex',
+    flexDirection: 'column',
+    alignItems: 'flex-start',
+    paddingTop: { default: '4rem', [SECTION]: '6rem' },
+    borderTopWidth: 1,
+    borderTopStyle: 'solid',
+    borderTopColor: colors.line,
+  },
+  closingTitle: {
+    fontSize: 'clamp(2.5rem, 6vw, 5rem)',
+    fontWeight: 500,
+    lineHeight: 1.02,
+    letterSpacing: '-0.032em',
+    color: colors.foreground,
   },
   actions: {
     display: 'flex',
     flexWrap: 'wrap',
-    justifyContent: {
-      default: 'center',
-      [SPLIT]: 'flex-start',
-    },
     gap: '0.75rem',
-    width: { default: '100%', '@media (min-width: 40rem)': 'auto' },
-    marginTop: { default: 0, [SPLIT]: '0.25rem' },
-  },
-  copy: {
-    display: 'inline-flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: '0.6rem',
-    width: { default: '100%', '@media (min-width: 40rem)': 'auto' },
-    height: {
-      default: 64,
-      [COMPACT]: 56,
-      '@media (max-width: 39.99rem)': 56,
-    },
-    paddingInline: '1.5rem',
-    fontFamily: fonts.display,
-    fontSize: 13,
-    letterSpacing: '0.1em',
-    textTransform: 'uppercase',
-    whiteSpace: 'nowrap',
-    cursor: 'pointer',
-    color: colors.foreground,
-    backgroundImage: {
-      default:
-        'linear-gradient(180deg, rgb(255 255 255 / 0.1), rgb(255 255 255 / 0.03))',
-      '@media (hover: hover)': {
-        default: null,
-        ':hover':
-          'linear-gradient(180deg, rgb(255 255 255 / 0.16), rgb(255 255 255 / 0.05))',
-      },
-    },
-    boxShadow:
-      'inset 0 1px 0 rgb(255 255 255 / 0.18), inset 0 0 0 1px rgb(255 255 255 / 0.12)',
-    clipPath: clips.chamfer,
-  },
-  icon: {
-    width: '0.9rem',
-    height: '0.9rem',
-  },
-  steps: {
-    display: { default: 'none', [SPLIT]: 'flex', [SHORT]: 'none' },
-    maxWidth: 'none',
-    padding: '1.5rem',
-  },
-  list: {
-    display: 'flex',
-    flexDirection: 'column',
-    gap: { default: '1rem', [COMPACT]: '0.75rem' },
-    listStyleType: 'none',
-  },
-  step: {
-    display: 'grid',
-    gridTemplateColumns: 'auto minmax(0, 1fr)',
-    alignItems: 'start',
-    columnGap: '1rem',
-    paddingTop: { default: '1rem', [COMPACT]: '0.75rem' },
-    borderTopWidth: 1,
-    borderTopStyle: 'solid',
-    borderTopColor: colors.line,
-  },
-  stepNumber: {
-    fontFamily: fonts.display,
-    fontSize: { default: '2.5rem', [COMPACT]: '1.75rem' },
-    lineHeight: 0.9,
-    color: 'transparent',
-    WebkitTextStrokeWidth: 1,
-    WebkitTextStrokeColor: colors.ice,
-  },
-  stepText: {
-    display: 'flex',
-    flexDirection: 'column',
-    gap: '0.35rem',
-  },
-  stepTitle: {
-    fontFamily: fonts.display,
-    fontSize: { default: 16, [COMPACT]: 14 },
-    lineHeight: 1.1,
-    letterSpacing: '0.08em',
-    textTransform: 'uppercase',
-    color: colors.foreground,
-  },
-  stepDetail: {
-    display: { default: 'block', [COMPACT]: 'none' },
-    fontFamily: fonts.display,
-    fontSize: 13,
-    lineHeight: 1.45,
-    color: colors.muted,
-  },
-  footer: {
-    display: { default: 'flex', [TINY]: 'none' },
-    flexWrap: 'wrap',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    columnGap: '1.5rem',
-    rowGap: '0.375rem',
-    paddingTop: '0.625rem',
-    fontFamily: fonts.micro,
-    fontSize: 8,
-    lineHeight: 1,
-    textTransform: 'uppercase',
-    color: colors.muted,
-    borderTopWidth: 1,
-    borderTopStyle: 'solid',
-    borderTopColor: colors.line,
-  },
-  link: {
-    color: colors.muted,
-    textDecorationLine: {
-      default: 'none',
-      '@media (hover: hover)': { default: null, ':hover': 'underline' },
-    },
-    textUnderlineOffset: '0.25em',
-  },
-  quote: {
-    display: { default: 'none', '@media (min-width: 64rem)': 'inline' },
-    fontFamily: fonts.display,
-    fontSize: 11,
-    letterSpacing: '0.04em',
-    textTransform: 'none',
-    color: colors.muted,
-    cursor: 'pointer',
+    marginTop: '2.5rem',
   },
 });

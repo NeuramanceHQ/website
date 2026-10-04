@@ -32,10 +32,10 @@ Done means `lint`, `format:check`, `typecheck`, `test`, `test:e2e`, and `build` 
 
 - `app/layout.tsx`: metadata, fonts (`next/font/local` from `lib/fonts`), JSON-LD, body styles
 - `app/globals.css`: reset inside `@layer resets`, then the `@stylex;` directive where StyleX emits its CSS
-- `app/(main)/`: pages sharing the nav (`/`, `/waitlist`, `/error`); `error.tsx` renders the `/error` page as the error boundary
-- `components/`: `nav`, `video-background` (YouTube background behind every page), `copy-button`, `glitch-wordmark`, `sound-button` (all audio: one shared `Audio` element), `styles.ts` (shared StyleX styles: access buttons, panels)
-- `lib/tokens.stylex.ts`: design constants (`defineConsts`) for colors, fonts, clip shapes
-- `lib/logotype.ts`: the custom wordmark letterforms; `lib/site.ts`: shared links and IDs
+- `app/(main)/`: pages sharing the announcement bar, sticky header, and footer (`/`, `/waitlist`, `/error`); `error.tsx` renders the `/error` page as the error boundary
+- `components/`: `announcement` (dismissible top bar), `nav` (sticky header), `footer`, `video-background` (YouTube background fixed behind every page), `copy-button`, `sound-button` (all audio: one shared `Audio` element), `styles.ts` (shared StyleX styles: page frame, buttons, labels, panels)
+- `lib/tokens.stylex.ts`: design constants (`defineConsts`) for colors and fonts
+- `lib/logotype.ts`: the custom NEURAMANCE wordmark; `lib/site.ts`: the access email, agent prompt, and video ID
 
 ## Styling
 

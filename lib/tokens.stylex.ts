@@ -2,24 +2,17 @@ import * as stylex from '@stylexjs/stylex';
 
 export const colors = stylex.defineConsts({
   background: '#050506',
-  foreground: '#e9edf0',
-  muted: '#b8bec9',
-  line: 'rgb(255 255 255 / 0.08)',
-  frost: '#dbf2f4',
-  ice: '#a5cfd8',
-  night: '#0b1240',
-  neon: '#9dffd6',
-  signal: '#e0262e',
+  foreground: '#f5f5f2',
+  muted: 'rgb(245 245 242 / 0.62)',
+  faint: 'rgb(245 245 242 / 0.4)',
+  line: 'rgb(255 255 255 / 0.1)',
+  card: '#17171a',
+  lime: '#e4f222',
+  ink: '#0b0b0c',
+  signal: '#ff6a3d',
 });
 
 export const fonts = stylex.defineConsts({
-  display:
-    'var(--font-display), "Share Tech Mono", ui-monospace, SFMono-Regular, Menlo, monospace',
-  micro: 'var(--font-micro), "Silkscreen", ui-monospace, monospace',
+  sans: 'var(--font-sans), ui-sans-serif, system-ui, -apple-system, "Helvetica Neue", Arial, sans-serif',
   mono: 'var(--font-mono), ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace',
-});
-
-export const clips = stylex.defineConsts({
-  chamfer:
-    'polygon(10px 0, 100% 0, 100% calc(100% - 10px), calc(100% - 10px) 100%, 0 100%, 0 10px)',
 });

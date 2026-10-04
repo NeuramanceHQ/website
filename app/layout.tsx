@@ -9,10 +9,10 @@ import './globals.css';
 export const metadata: Metadata = {
   title: {
     template: '%s | Neuramance®',
-    default: 'Neuramance® Metaltech - Metal Parts for AI Agents',
+    default: 'Neuramance® - Metal Parts for AI Agents',
   },
   description:
-    'Neuramance Metaltech lets AI agents like Claude Code and Codex quote, order, and track real metal parts and fabrication, programmatically.',
+    'Neuramance lets AI agents like Claude Code and Codex quote, order, and track real metal parts and fabrication, programmatically.',
   keywords: [
     'AI agents',
     'Claude Code',
@@ -42,8 +42,8 @@ export const metadata: Metadata = {
     type: 'website',
     locale: 'en_US',
     url: 'https://neuramance.com',
-    siteName: 'Neuramance Metaltech',
-    title: 'Neuramance® Metaltech - Metal Parts for AI Agents',
+    siteName: 'Neuramance',
+    title: 'Neuramance® - Metal Parts for AI Agents',
     description:
       'Your agent sends the CAD file; we ship the metal part. CNC machining, sheet metal, laser cutting, and finishing for Claude Code, Codex, and any AI agent.',
     images: [
@@ -51,13 +51,13 @@ export const metadata: Metadata = {
         url: '/opengraph-image.jpg',
         width: 1200,
         height: 630,
-        alt: 'Neuramance Metaltech - Metal Parts for AI Agents',
+        alt: 'Neuramance - Metal Parts for AI Agents',
       },
     ],
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'Neuramance® Metaltech - Metal Parts for AI Agents',
+    title: 'Neuramance® - Metal Parts for AI Agents',
     description:
       'Your agent sends the CAD file; we ship the metal part. CNC machining, sheet metal, laser cutting, and finishing for Claude Code, Codex, and any AI agent.',
     images: ['/opengraph-image.jpg'],
@@ -80,14 +80,10 @@ export const viewport: Viewport = {
   colorScheme: 'dark',
 };
 
-const fontDisplay = localFont({
-  src: '../lib/fonts/ShareTechMono-Regular.woff2',
-  variable: '--font-display',
-});
-
-const fontMicro = localFont({
-  src: '../lib/fonts/Silkscreen-Regular.woff2',
-  variable: '--font-micro',
+const fontSans = localFont({
+  src: '../lib/fonts/InterVariable.woff2',
+  variable: '--font-sans',
+  weight: '400 600',
 });
 
 const fontMono = localFont({
@@ -98,12 +94,11 @@ const fontMono = localFont({
 const structuredData = {
   '@context': 'https://schema.org',
   '@type': 'Organization',
-  name: 'Neuramance Metaltech Corporation',
-  alternateName: 'Neuramance',
+  name: 'Neuramance',
   url: 'https://neuramance.com',
   logo: 'https://neuramance.com/opengraph-image.jpg',
   description:
-    'Neuramance Metaltech lets AI agents like Claude Code and Codex quote, order, and track real metal parts and fabrication, programmatically.',
+    'Neuramance lets AI agents like Claude Code and Codex quote, order, and track real metal parts and fabrication, programmatically.',
   foundingDate: '2025',
   sameAs: ['https://twitter.com/neuramance', 'https://github.com/neuramance'],
   contactPoint: {
@@ -115,10 +110,7 @@ const structuredData = {
 
 export default function RootLayout({ children }: LayoutProps<'/'>) {
   return (
-    <html
-      lang="en"
-      className={`${fontDisplay.variable} ${fontMicro.variable} ${fontMono.variable}`}
-    >
+    <html lang="en" className={`${fontSans.variable} ${fontMono.variable}`}>
       <head>
         <script
           type="application/ld+json"
@@ -136,8 +128,8 @@ export default function RootLayout({ children }: LayoutProps<'/'>) {
 const styles = stylex.create({
   body: {
     minHeight: '100dvh',
-    overflowX: 'hidden',
-    fontFamily: fonts.display,
+    overflowX: 'clip',
+    fontFamily: fonts.sans,
     WebkitFontSmoothing: 'antialiased',
     MozOsxFontSmoothing: 'grayscale',
     color: colors.foreground,

@@ -1,6 +1,6 @@
-# Neuramance Metaltech Corporation
+# Neuramance
 
-> Neuramance Metaltech lets AI agents like Claude Code and Codex get physical parts and metal work done: your agent sends the CAD file, we ship the metal part.
+> Neuramance lets AI agents like Claude Code and Codex get physical parts and metal work done: your agent sends the CAD file, we ship the metal part.
 
 Status: private beta. Access is by request.
 
@@ -19,4 +19,4 @@ Status: private beta. Access is by request.
 
 ## Contact
 
-- [Request access](mailto:austin@neuramance.com?subject=Neuramance%20Metaltech%20access): email austin@neuramance.com
+- [Request access](mailto:austin@neuramance.com?subject=Neuramance%20access): email austin@neuramance.com

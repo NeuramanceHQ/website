@@ -5,6 +5,7 @@ const HEIGHT = 250;
 const BAR = 58;
 const STEM = 13;
 const GAP = 22;
+const EXTEND = 2.1;
 
 const rect = (x: number, y: number, w: number, h: number): Polygon => [
   [x, y],
@@ -113,12 +114,6 @@ const GLYPHS = {
       [0, 228],
     ],
   ],
-  T: [
-    rect(0, 0, WIDTH, BAR),
-    rect((WIDTH - STEM) / 2, BAR, STEM, HEIGHT - BAR),
-  ],
-  L: [LEFT, rect(0, 192, WIDTH, BAR)],
-  H: [LEFT, RIGHT, rect(0, 96, WIDTH, BAR)],
 } satisfies Record<string, readonly Polygon[]>;
 
 type Letter = keyof typeof GLYPHS;
@@ -135,34 +130,17 @@ const NAME: readonly Letter[] = [
   'C',
   'E',
 ];
-const DIVISION: readonly Letter[] = [
-  'M',
-  'E',
-  'T',
-  'A',
-  'L',
-  'T',
-  'E',
-  'C',
-  'H',
-];
-const WORD_GAP = 70;
-
 const span = (word: readonly Letter[]) => word.length * (WIDTH + GAP) - GAP;
 
-const typeset = (word: readonly Letter[], x = 0) =>
-  word.map((letter, index) =>
+export const WORDMARK = {
+  width: span(NAME) * EXTEND,
+  height: HEIGHT,
+  path: NAME.map((letter, index) =>
     GLYPHS[letter]
       .map(
         (polygon) =>
-          `M${polygon.map(([px, py]) => `${x + index * (WIDTH + GAP) + px} ${py}`).join('L')}Z`,
+          `M${polygon.map(([px, py]) => `${(index * (WIDTH + GAP) + px) * EXTEND} ${py}`).join('L')}Z`,
       )
       .join(''),
-  );
-
-export const WORDMARK = {
-  width: span(NAME) + WORD_GAP + span(DIVISION),
-  height: HEIGHT,
-  name: typeset(NAME),
-  division: typeset(DIVISION, span(NAME) + WORD_GAP),
+  ).join(''),
 };
