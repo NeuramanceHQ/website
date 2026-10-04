@@ -1,11 +1,11 @@
 import * as stylex from '@stylexjs/stylex';
+import { ArrowUpRight } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
-import { Clock } from '@/components/clock';
-import { cta } from '@/components/styles';
+import { access, accessSize } from '@/components/styles';
 import { WORDMARK } from '@/lib/logotype';
-import { ACCESS_HREF, BACKGROUND_VIDEO_URL } from '@/lib/site';
-import { colors, fonts } from '@/lib/tokens.stylex';
+import { ACCESS_HREF } from '@/lib/site';
+import { colors } from '@/lib/tokens.stylex';
 
 const EXTEND = 2.1;
 
@@ -33,31 +33,24 @@ export function Nav() {
         </svg>
       </Link>
       <div {...stylex.props(styles.group)}>
-        <p {...stylex.props(styles.onAir)}>
-          <span aria-hidden {...stylex.props(styles.dot)} />
-          On air
-          <Clock {...stylex.props(styles.clock)} />
-        </p>
-        <a
-          href={BACKGROUND_VIDEO_URL}
-          target="_blank"
-          rel="noopener noreferrer"
-          {...stylex.props(styles.credit)}
-        >
-          Video — yaego, Eye to Eye ↗
-        </a>
         <a
           href={ACCESS_HREF}
-          {...stylex.props(cta.base, cta.primary, cta.small, styles.access)}
+          {...stylex.props(
+            stylex.defaultMarker(),
+            access.link,
+            accessSize.compact,
+          )}
         >
-          Request access ↗
+          <span aria-hidden {...stylex.props(access.swatches)} />
+          Request access
+          <span aria-hidden {...stylex.props(access.arrow)}>
+            <ArrowUpRight {...stylex.props(access.glyph)} />
+          </span>
         </a>
       </div>
     </header>
   );
 }
-
-const blink = stylex.keyframes({ '50%': { opacity: 0.25 } });
 
 const styles = stylex.create({
   header: {
@@ -87,51 +80,7 @@ const styles = stylex.create({
   division: {
     fill: colors.muted,
   },
-  access: {
-    display: { default: 'none', '@media (min-width: 30rem)': 'inline-flex' },
-  },
   group: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: '1.25rem',
-  },
-  onAir: {
-    display: { default: 'none', '@media (min-width: 48rem)': 'flex' },
-    alignItems: 'center',
-    gap: '0.5rem',
-    fontFamily: fonts.micro,
-    fontSize: 8,
-    lineHeight: 1,
-    textTransform: 'uppercase',
-    color: colors.muted,
-  },
-  credit: {
-    display: { default: 'none', '@media (min-width: 64rem)': 'inline' },
-    fontFamily: fonts.micro,
-    fontSize: 8,
-    lineHeight: 1,
-    textTransform: 'uppercase',
-    color: colors.muted,
-    textDecorationLine: {
-      default: 'none',
-      '@media (hover: hover)': { default: null, ':hover': 'underline' },
-    },
-    textUnderlineOffset: '0.25em',
-  },
-  dot: {
-    width: 6,
-    height: 6,
-    borderRadius: '50%',
-    backgroundColor: colors.signal,
-    boxShadow: `0 0 6px ${colors.signal}`,
-    animationName: blink,
-    animationDuration: '1.6s',
-    animationTimingFunction: 'steps(1)',
-    animationIterationCount: 'infinite',
-  },
-  clock: {
-    minWidth: '9ch',
-    color: colors.foreground,
-    fontVariantNumeric: 'tabular-nums',
+    display: { default: 'none', '@media (min-width: 30rem)': 'flex' },
   },
 });

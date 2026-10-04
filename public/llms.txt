@@ -1,8 +1,21 @@
 # Neuramance Metaltech Corporation
 
-> Neuramance Metaltech lets AI agents like Claude Code and Codex get physical parts and metal work done: quote, order, and track real fabricated metal parts, programmatically.
+> Neuramance Metaltech lets AI agents like Claude Code and Codex get physical parts and metal work done: your agent sends the CAD file, we ship the metal part.
 
 Status: private beta. Access is by request.
+
+## Services
+
+- CNC machining
+- Sheet metal
+- Laser cutting
+- Finishing
+
+## How it works
+
+1. Send file: your agent sends a CAD file (STEP, DXF), material, and quantity.
+2. Get quote: price and lead time come back as structured data.
+3. Parts ship: we fabricate, inspect, and ship; status arrives in code.
 
 ## Contact
 

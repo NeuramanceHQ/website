@@ -20,6 +20,10 @@ export const metadata: Metadata = {
     'manufacturing API',
     'metal fabrication',
     'metal parts',
+    'CNC machining',
+    'sheet metal',
+    'laser cutting',
+    'finishing',
   ],
   authors: [{ name: 'Neuramance' }],
   creator: 'Neuramance',
@@ -39,23 +43,23 @@ export const metadata: Metadata = {
     locale: 'en_US',
     url: 'https://neuramance.com',
     siteName: 'Neuramance Metaltech',
-    title: 'Neuramance® Metaltech - Give Your Agents Hands',
+    title: 'Neuramance® Metaltech - Metal Parts for AI Agents',
     description:
-      'Metal parts and fabrication, ordered by AI agents. Claude Code, Codex, and any agent can quote, order, and track real parts in code.',
+      'Your agent sends the CAD file; we ship the metal part. CNC machining, sheet metal, laser cutting, and finishing for Claude Code, Codex, and any AI agent.',
     images: [
       {
         url: '/opengraph-image.jpg',
         width: 1200,
         height: 630,
-        alt: 'Neuramance Metaltech - Give Your Agents Hands',
+        alt: 'Neuramance Metaltech - Metal Parts for AI Agents',
       },
     ],
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'Neuramance® Metaltech - Give Your Agents Hands',
+    title: 'Neuramance® Metaltech - Metal Parts for AI Agents',
     description:
-      'Metal parts and fabrication, ordered by AI agents. Claude Code, Codex, and any agent can quote, order, and track real parts in code.',
+      'Your agent sends the CAD file; we ship the metal part. CNC machining, sheet metal, laser cutting, and finishing for Claude Code, Codex, and any AI agent.',
     images: ['/opengraph-image.jpg'],
   },
   robots: {

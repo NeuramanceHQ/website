@@ -1,25 +1,32 @@
 import * as stylex from '@stylexjs/stylex';
-import { Copy } from 'lucide-react';
+import { ArrowUpRight, Copy } from 'lucide-react';
 import Link from 'next/link';
-import { AgentSession } from '@/components/agent-session';
-import { Broadcast } from '@/components/broadcast';
 import { CopyButton } from '@/components/copy-button';
 import { GlitchWordmark } from '@/components/glitch-wordmark';
 import { SoundButton } from '@/components/sound-button';
-import { cta } from '@/components/styles';
+import { access, accessSize, panel } from '@/components/styles';
 import { WORDMARK } from '@/lib/logotype';
 import { ACCESS_HREF } from '@/lib/site';
-import { colors, fonts } from '@/lib/tokens.stylex';
+import { clips, colors, fonts } from '@/lib/tokens.stylex';
 
 const AGENT_PROMPT =
   'Read https://neuramance.com/llms.txt, then draft an email to austin@neuramance.com requesting Neuramance Metaltech beta access, describing the physical parts this project needs.';
 
-const SPEC = [
-  'Metal parts',
-  'For AI agents',
-  'Quote / order / track',
-  'In code',
-  'Private beta',
+const SERVICES = ['CNC machining', 'Sheet metal', 'Laser cutting', 'Finishing'];
+
+const STEPS = [
+  {
+    title: 'Send file',
+    detail: 'Your agent sends a CAD file (STEP, DXF), material, and quantity.',
+  },
+  {
+    title: 'Get quote',
+    detail: 'Price and lead time come back as structured data.',
+  },
+  {
+    title: 'Parts ship',
+    detail: 'We fabricate, inspect, and ship. Status arrives in code.',
+  },
 ];
 
 const WORDMARK_MASK = `url("data:image/svg+xml,${encodeURIComponent(
@@ -27,8 +34,6 @@ const WORDMARK_MASK = `url("data:image/svg+xml,${encodeURIComponent(
 )}")`;
 
 const SPLIT = '@media (min-width: 40rem) and (min-aspect-ratio: 1 / 1)';
-const ROOMY =
-  '@media (min-width: 72rem) and (min-height: 44rem) and (min-aspect-ratio: 1 / 1)';
 const COMPACT = '@media (max-height: 46rem)';
 const SHORT = '@media (max-height: 36rem)';
 const TINY = '@media (max-height: 30rem)';
@@ -85,56 +90,75 @@ export default function Page() {
         </p>
       </div>
       <div {...stylex.props(styles.content)}>
-        <div {...stylex.props(styles.stage)}>
-          <div {...stylex.props(styles.screen)}>
-            <div {...stylex.props(styles.ticks)}>
-              <Broadcast>
-                <h2>Give your agents hands.</h2>
-              </Broadcast>
-            </div>
-            <div aria-hidden {...stylex.props(styles.legend)}>
-              <span>FIG. 01 — Austin, Texas</span>
-              <span {...stylex.props(styles.catalog)}>
-                <span {...stylex.props(styles.barcode)} />
-                NMT-001
-              </span>
-            </div>
-          </div>
-        </div>
-        <div {...stylex.props(styles.spec)}>
-          <ul {...stylex.props(styles.list)}>
-            {SPEC.map((line, index) => (
-              <li key={line} {...stylex.props(styles.item)}>
-                <span aria-hidden {...stylex.props(styles.index)}>
+        <div {...stylex.props(styles.offer)}>
+          <p {...stylex.props(styles.eyebrow)}>
+            Private beta — metal parts for AI agents
+          </p>
+          <h2 {...stylex.props(styles.headline)}>
+            <span>Your agent sends the CAD file.</span>{' '}
+            <span {...stylex.props(styles.second)}>
+              We ship the metal part.
+            </span>
+          </h2>
+          <p {...stylex.props(styles.lead)}>
+            Claude Code, Codex, or any AI agent quotes, orders, and tracks real
+            fabrication in code.
+          </p>
+          <ul {...stylex.props(styles.services)}>
+            {SERVICES.map((service, index) => (
+              <li key={service} {...stylex.props(styles.service)}>
+                <span aria-hidden {...stylex.props(styles.number)}>
                   {String(index + 1).padStart(2, '0')}
                 </span>
-                {line}
+                <span>{service}</span>
               </li>
             ))}
           </ul>
-          <p {...stylex.props(styles.lead)}>
-            Claude Code, Codex, and any agent can quote, order, and track real
-            fabrication, programmatically.
-          </p>
           <div {...stylex.props(styles.actions)}>
             <a
               href={ACCESS_HREF}
-              {...stylex.props(cta.base, cta.primary, styles.button)}
+              {...stylex.props(
+                stylex.defaultMarker(),
+                access.link,
+                accessSize.large,
+              )}
             >
-              Request access ↗
+              <span aria-hidden {...stylex.props(access.swatches)} />
+              <span aria-hidden {...stylex.props(access.note)}>
+                Private beta
+              </span>
+              <span>Request access</span>
+              <span aria-hidden {...stylex.props(access.arrow)}>
+                <ArrowUpRight {...stylex.props(access.glyph)} />
+              </span>
             </a>
-            <CopyButton
-              text={AGENT_PROMPT}
-              {...stylex.props(cta.base, cta.secondary, styles.button)}
-            >
+            <CopyButton text={AGENT_PROMPT} {...stylex.props(styles.copy)}>
               <Copy aria-hidden {...stylex.props(styles.icon)} />
               Copy agent prompt
             </CopyButton>
           </div>
         </div>
-        <div {...stylex.props(styles.session)}>
-          <AgentSession />
-        </div>
+        <section
+          aria-label="How it works"
+          {...stylex.props(panel.card, styles.steps)}
+        >
+          <p {...stylex.props(panel.label)}>How it works</p>
+          <ol {...stylex.props(styles.list)}>
+            {STEPS.map((step, index) => (
+              <li key={step.title} {...stylex.props(styles.step)}>
+                <span aria-hidden {...stylex.props(styles.stepNumber)}>
+                  {String(index + 1).padStart(2, '0')}
+                </span>
+                <span {...stylex.props(styles.stepText)}>
+                  <span {...stylex.props(styles.stepTitle)}>{step.title}</span>
+                  <span {...stylex.props(styles.stepDetail)}>
+                    {step.detail}
+                  </span>
+                </span>
+              </li>
+            ))}
+          </ol>
+        </section>
       </div>
       <footer {...stylex.props(styles.footer)}>
         <span>www.neuramance.com</span>
@@ -296,149 +320,180 @@ const styles = stylex.create({
     display: 'grid',
     gridTemplateColumns: {
       default: 'minmax(0, 1fr)',
-      [SPLIT]: 'minmax(0, 1fr) minmax(15rem, min(24rem, 40%))',
-      [ROOMY]: 'minmax(0, 1fr) minmax(15rem, 21rem) minmax(18rem, 21rem)',
+      [SPLIT]: 'minmax(0, 1fr) minmax(16rem, 24rem)',
+      [SHORT]: 'minmax(0, 1fr)',
     },
-    gridTemplateRows: {
-      default: 'minmax(0, 1fr) auto',
-      [SPLIT]: 'minmax(0, 1fr)',
-    },
-    columnGap: { default: '2rem', '@media (min-width: 80rem)': '3rem' },
-    rowGap: '1rem',
+    alignItems: 'center',
+    columnGap: { default: '2rem', '@media (min-width: 80rem)': '4rem' },
     flexGrow: 1,
     flexBasis: 0,
     minHeight: 0,
-    paddingTop: { default: '0.25rem', [SPLIT]: '0.75rem' },
   },
-  stage: {
-    display: 'flex',
-    alignItems: { default: 'center', [SPLIT]: 'flex-start' },
-    justifyContent: { default: 'center', [SPLIT]: 'flex-start' },
-    minHeight: 0,
-    containerType: 'size',
-  },
-  screen: {
-    width: {
-      default: 'min(100cqw, 100cqh * 4 / 3)',
-      [SPLIT]: 'min(100cqw - 24px, (100cqh - 2.75rem) * 4 / 3)',
-    },
-    marginInline: { default: 0, [SPLIT]: '12px' },
-    marginTop: { default: 0, [SPLIT]: '12px' },
-  },
-  ticks: {
-    position: 'relative',
-    '::before': {
-      content: '""',
-      display: { default: 'none', [SPLIT]: 'block' },
-      position: 'absolute',
-      top: -12,
-      right: -12,
-      bottom: -12,
-      left: -12,
-      pointerEvents: 'none',
-      color: 'rgb(219 242 244 / 0.4)',
-      backgroundImage:
-        'linear-gradient(currentColor, currentColor), linear-gradient(currentColor, currentColor), linear-gradient(currentColor, currentColor), linear-gradient(currentColor, currentColor), linear-gradient(currentColor, currentColor), linear-gradient(currentColor, currentColor), linear-gradient(currentColor, currentColor), linear-gradient(currentColor, currentColor)',
-      backgroundSize:
-        '12px 1px, 1px 12px, 12px 1px, 1px 12px, 12px 1px, 1px 12px, 12px 1px, 1px 12px',
-      backgroundPosition:
-        'top left, top left, top right, top right, bottom left, bottom left, bottom right, bottom right',
-      backgroundRepeat: 'no-repeat',
-    },
-  },
-  legend: {
-    display: {
-      default: 'none',
-      [SPLIT]: { default: 'none', '@container (min-width: 26rem)': 'flex' },
-    },
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginTop: '1.25rem',
-    fontFamily: fonts.micro,
-    fontSize: 8,
-    lineHeight: 1,
-    textTransform: 'uppercase',
-    color: colors.muted,
-  },
-  catalog: {
-    display: 'inline-flex',
-    alignItems: 'center',
-    gap: '0.625rem',
-  },
-  barcode: {
-    width: 54,
-    height: 10,
-    opacity: 0.6,
-    backgroundImage:
-      'repeating-linear-gradient(90deg, currentColor 0 1px, transparent 1px 3px, currentColor 3px 5px, transparent 5px 6px, currentColor 6px 7px, transparent 7px 10px)',
-  },
-  spec: {
+  offer: {
     display: 'flex',
     flexDirection: 'column',
-    alignItems: { default: 'center', [SPLIT]: 'flex-start' },
-    gap: { default: '0.875rem', [SPLIT]: '1.25rem' },
+    alignItems: {
+      default: 'center',
+      [SPLIT]: 'flex-start',
+    },
+    gap: { default: '0.9rem', [SPLIT]: '1.25rem', [COMPACT]: '0.9rem' },
+    minWidth: 0,
     textAlign: { default: 'center', [SPLIT]: 'start' },
   },
-  list: {
-    listStyleType: 'none',
-    fontFamily: fonts.display,
-    fontSize: {
-      default: '1.125rem',
-      [SPLIT]: '1.5rem',
-      '@media (min-width: 80rem) and (min-height: 62rem)': '1.875rem',
-      [TINY]: '1.125rem',
-    },
-    lineHeight: 1.08,
-    letterSpacing: '0.01em',
-    textTransform: 'uppercase',
-    color: colors.foreground,
-  },
-  item: {
-    display: 'flex',
-    alignItems: 'baseline',
-    gap: '0.625rem',
-    paddingInline: '0.25rem',
-    marginInline: '-0.25rem',
-    transitionProperty: 'background-color, color',
-    transitionDuration: '80ms',
-    backgroundColor: {
-      default: 'transparent',
-      '@media (hover: hover)': { default: null, ':hover': colors.frost },
-    },
-    color: {
-      default: null,
-      '@media (hover: hover)': { default: null, ':hover': colors.background },
-    },
-  },
-  index: {
+  eyebrow: {
     fontFamily: fonts.micro,
     fontSize: 8,
     lineHeight: 1,
-    color: colors.muted,
+    textTransform: 'uppercase',
+    color: colors.ice,
+  },
+  headline: {
+    fontFamily: fonts.display,
+    fontSize: {
+      default: 'clamp(1.25rem, 6.2vw, 2rem)',
+      [SPLIT]: 'clamp(1.25rem, min(3.4vw, 5.2dvh), 3.25rem)',
+    },
+    lineHeight: 1.05,
+    letterSpacing: '0.01em',
+    textTransform: 'uppercase',
+    textWrap: 'balance',
+    color: colors.foreground,
+  },
+  second: {
+    display: 'block',
+    color: colors.ice,
   },
   lead: {
     display: { default: 'block', [COMPACT]: 'none' },
-    maxWidth: '22rem',
+    maxWidth: '34rem',
     fontFamily: fonts.display,
-    fontSize: 13,
-    lineHeight: '1.25rem',
+    fontSize: { default: 14, [SPLIT]: 15 },
+    lineHeight: 1.5,
     color: colors.muted,
+  },
+  services: {
+    display: { default: 'flex', [SHORT]: 'none' },
+    flexWrap: 'wrap',
+    justifyContent: { default: 'center', [SPLIT]: 'flex-start' },
+    gap: '0.375rem',
+    listStyleType: 'none',
+  },
+  service: {
+    display: 'inline-flex',
+    alignItems: 'baseline',
+    gap: '0.45rem',
+    paddingBlock: '0.35rem',
+    paddingInline: '0.7rem',
+    fontFamily: fonts.display,
+    fontSize: 12,
+    lineHeight: 1,
+    letterSpacing: '0.08em',
+    textTransform: 'uppercase',
+    color: colors.foreground,
+    backgroundImage:
+      'linear-gradient(180deg, rgb(255 255 255 / 0.08), rgb(255 255 255 / 0.02))',
+    boxShadow: 'inset 0 0 0 1px rgb(255 255 255 / 0.12)',
+  },
+  number: {
+    fontFamily: fonts.micro,
+    fontSize: 8,
+    color: colors.ice,
   },
   actions: {
     display: 'flex',
     flexWrap: 'wrap',
-    justifyContent: { default: 'center', [SPLIT]: 'flex-start' },
-    gap: '0.625rem',
+    justifyContent: {
+      default: 'center',
+      [SPLIT]: 'flex-start',
+    },
+    gap: '0.75rem',
+    width: { default: '100%', '@media (min-width: 40rem)': 'auto' },
+    marginTop: { default: 0, [SPLIT]: '0.25rem' },
   },
-  button: {
-    minWidth: '13.5rem',
+  copy: {
+    display: 'inline-flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: '0.6rem',
+    width: { default: '100%', '@media (min-width: 40rem)': 'auto' },
+    height: {
+      default: 64,
+      [COMPACT]: 56,
+      '@media (max-width: 39.99rem)': 56,
+    },
+    paddingInline: '1.5rem',
+    fontFamily: fonts.display,
+    fontSize: 13,
+    letterSpacing: '0.1em',
+    textTransform: 'uppercase',
+    whiteSpace: 'nowrap',
+    cursor: 'pointer',
+    color: colors.foreground,
+    backgroundImage: {
+      default:
+        'linear-gradient(180deg, rgb(255 255 255 / 0.1), rgb(255 255 255 / 0.03))',
+      '@media (hover: hover)': {
+        default: null,
+        ':hover':
+          'linear-gradient(180deg, rgb(255 255 255 / 0.16), rgb(255 255 255 / 0.05))',
+      },
+    },
+    boxShadow:
+      'inset 0 1px 0 rgb(255 255 255 / 0.18), inset 0 0 0 1px rgb(255 255 255 / 0.12)',
+    clipPath: clips.chamfer,
   },
   icon: {
-    width: '0.875rem',
-    height: '0.875rem',
+    width: '0.9rem',
+    height: '0.9rem',
   },
-  session: {
-    display: { default: 'none', [ROOMY]: 'block' },
+  steps: {
+    display: { default: 'none', [SPLIT]: 'flex', [SHORT]: 'none' },
+    maxWidth: 'none',
+    padding: '1.5rem',
+  },
+  list: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: { default: '1rem', [COMPACT]: '0.75rem' },
+    listStyleType: 'none',
+  },
+  step: {
+    display: 'grid',
+    gridTemplateColumns: 'auto minmax(0, 1fr)',
+    alignItems: 'start',
+    columnGap: '1rem',
+    paddingTop: { default: '1rem', [COMPACT]: '0.75rem' },
+    borderTopWidth: 1,
+    borderTopStyle: 'solid',
+    borderTopColor: colors.line,
+  },
+  stepNumber: {
+    fontFamily: fonts.display,
+    fontSize: { default: '2.5rem', [COMPACT]: '1.75rem' },
+    lineHeight: 0.9,
+    color: 'transparent',
+    WebkitTextStrokeWidth: 1,
+    WebkitTextStrokeColor: colors.ice,
+  },
+  stepText: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '0.35rem',
+  },
+  stepTitle: {
+    fontFamily: fonts.display,
+    fontSize: { default: 16, [COMPACT]: 14 },
+    lineHeight: 1.1,
+    letterSpacing: '0.08em',
+    textTransform: 'uppercase',
+    color: colors.foreground,
+  },
+  stepDetail: {
+    display: { default: 'block', [COMPACT]: 'none' },
+    fontFamily: fonts.display,
+    fontSize: 13,
+    lineHeight: 1.45,
+    color: colors.muted,
   },
   footer: {
     display: { default: 'flex', [TINY]: 'none' },

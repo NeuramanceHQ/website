@@ -28,18 +28,19 @@ test.beforeEach(async ({ page }) => {
 });
 
 test('home page renders its production styles', async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
   await page.goto('/');
   await expect(page.locator('body')).toHaveCSS(
     'background-color',
     'rgb(5, 5, 6)',
   );
   for (const [role, height] of [
-    ['main', '40px'],
-    ['banner', '28px'],
+    ['main', '64px'],
+    ['banner', '34px'],
   ] as const) {
     const access = page
       .getByRole(role)
-      .getByRole('link', { name: 'Request access ↗', exact: true });
+      .getByRole('link', { name: 'Request access', exact: true });
     await expect(access).toHaveCSS('height', height);
   }
 });
@@ -49,11 +50,13 @@ for (const [width, height] of [
   [375, 667],
   [390, 844],
   [768, 1024],
+  [1024, 600],
   [1024, 768],
   [1280, 720],
   [1440, 900],
   [1920, 1080],
   [844, 390],
+  [932, 430],
   [667, 375],
 ] as const) {
   test(`home page never scrolls and keeps key content on screen at ${width}x${height}`, async ({
@@ -82,13 +85,13 @@ for (const [width, height] of [
         exact: true,
       }),
       page.getByRole('heading', {
-        name: 'Give your agents hands.',
+        name: 'Your agent sends the CAD file. We ship the metal part.',
         level: 2,
         exact: true,
       }),
       page
         .getByRole('main')
-        .getByRole('link', { name: 'Request access ↗', exact: true }),
+        .getByRole('link', { name: 'Request access', exact: true }),
       page.getByRole('button', { name: 'Copy agent prompt', exact: true }),
     ]) {
       await expect(content).toBeVisible();
@@ -104,12 +107,45 @@ for (const [width, height] of [
   });
 }
 
+for (const [width, height] of [
+  [1440, 900],
+  [1280, 720],
+  [1920, 1080],
+] as const) {
+  test(`main section names the services and how it works at ${width}x${height}`, async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width, height });
+    await page.goto('/');
+    for (const text of [
+      'CNC machining',
+      'Sheet metal',
+      'Laser cutting',
+      'Finishing',
+      'Send file',
+      'Get quote',
+      'Parts ship',
+    ]) {
+      const content = page.getByRole('main').getByText(text, { exact: true });
+      await expect(content).toBeVisible();
+      const box = await content.boundingBox();
+      if (box === null) {
+        throw new Error(`${content.toString()} has no bounding box`);
+      }
+      expect(box.x).toBeGreaterThanOrEqual(0);
+      expect(box.y).toBeGreaterThanOrEqual(0);
+      expect(box.x + box.width).toBeLessThanOrEqual(width);
+      expect(box.y + box.height).toBeLessThanOrEqual(height);
+    }
+  });
+}
+
 test('Request access stays reachable at 400% zoom', async ({ page }) => {
   await page.setViewportSize({ width: 320, height: 256 });
   await page.goto('/');
   const access = page
     .getByRole('main')
-    .getByRole('link', { name: 'Request access ↗', exact: true });
+    .getByRole('link', { name: 'Request access', exact: true });
   await access.evaluate((link) => link.scrollIntoView({ block: 'center' }));
   const box = await access.boundingBox();
   if (box === null) {
@@ -125,7 +161,7 @@ test('Request access links to the Metaltech access email', async ({ page }) => {
     await expect(
       page
         .getByRole(role)
-        .getByRole('link', { name: 'Request access ↗', exact: true }),
+        .getByRole('link', { name: 'Request access', exact: true }),
     ).toHaveAttribute(
       'href',
       'mailto:austin@neuramance.com?subject=Neuramance%20Metaltech%20access',
@@ -181,26 +217,6 @@ test('header home link points to /', async ({ page }) => {
   ).toHaveAttribute('href', '/');
 });
 
-test('header clock is visible at 1440x900 and hidden at 390x844', async ({
-  page,
-}) => {
-  await page.goto('/');
-  const clock = page
-    .getByRole('banner')
-    .getByText(/^\d{2}:\d{2}:\d{2} C[DS]T$/);
-  for (const { width, height, visible } of [
-    { width: 1440, height: 900, visible: true },
-    { width: 390, height: 844, visible: false },
-  ]) {
-    await page.setViewportSize({ width, height });
-    if (visible) {
-      await expect(clock).toBeVisible({ timeout: 10_000 });
-    } else {
-      await expect(clock).toBeHidden();
-    }
-  }
-});
-
 test('Copy agent prompt copies the exact prompt and resets within 4 seconds', async ({
   context,
   page,
@@ -247,6 +263,14 @@ test('/llms.txt serves the agent guide and is linked from the home page', async 
   const body = await response.text();
   expect(body.split(/\r?\n/)[0]).toBe('# Neuramance Metaltech Corporation');
   expect(body).toContain('austin@neuramance.com');
+  for (const service of [
+    'CNC machining',
+    'Sheet metal',
+    'Laser cutting',
+    'Finishing',
+  ]) {
+    expect(body).toContain(service);
+  }
   expect(body).not.toContain('/about');
 
   await page.setViewportSize({ width: 1440, height: 900 });
@@ -259,47 +283,43 @@ test('/llms.txt serves the agent guide and is linked from the home page', async 
   await expect(guide).toHaveAttribute('href', '/llms.txt');
 });
 
-for (const { width, height, visible } of [
-  { width: 1440, height: 900, visible: true },
-  { width: 390, height: 844, visible: false },
-]) {
-  test(`example agent session is ${visible ? 'visible' : 'hidden'} at ${width}x${height}`, async ({
-    page,
-  }) => {
-    await page.setViewportSize({ width, height });
-    await page.goto('/');
-    const session = page.getByText('neuramance.quote(bracket.step × 40)', {
-      exact: true,
-    });
-    if (visible) {
-      await expect(session).toBeVisible();
-    } else {
-      await expect(session).toBeHidden();
-    }
-  });
-}
-
-test('reduced motion disables the caption and every figure animation', async ({
+test('reduced motion stops the wordmark and access button animations', async ({
   page,
 }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
-  await page.emulateMedia({ reducedMotion: 'no-preference' });
-  await page.goto('/');
-  const heading = page.getByRole('heading', {
-    name: 'Give your agents hands.',
-    level: 2,
-    exact: true,
-  });
-  const caption = page.locator('figcaption').filter({ has: heading });
-  await expect(caption).not.toHaveCSS('animation-name', 'none');
-
-  await page.emulateMedia({ reducedMotion: 'reduce' });
-  await page.reload();
-  await expect(caption).toHaveCSS('animation-name', 'none');
-  const figure = page.getByRole('figure').filter({ has: heading });
-  await expect(figure).toBeVisible();
-  for (const element of await figure.locator('*').all()) {
-    await expect(element).toHaveCSS('animation-name', 'none');
+  for (const reducedMotion of ['no-preference', 'reduce'] as const) {
+    await page.emulateMedia({ reducedMotion });
+    if (reducedMotion === 'no-preference') {
+      await page.goto('/');
+    } else {
+      await page.reload();
+    }
+    for (const content of [
+      page.getByRole('heading', {
+        name: 'Neuramance® Metaltech Corporation',
+        level: 1,
+        exact: true,
+      }),
+      page
+        .getByRole('main')
+        .getByRole('link', { name: 'Request access', exact: true }),
+      page
+        .getByRole('banner')
+        .getByRole('link', { name: 'Request access', exact: true }),
+    ]) {
+      await expect(content).toBeVisible();
+      const animations = await content.evaluate((element) =>
+        [element, ...element.querySelectorAll('*')].flatMap((el) => [
+          getComputedStyle(el).animationName,
+          getComputedStyle(el, '::after').animationName,
+        ]),
+      );
+      if (reducedMotion === 'no-preference') {
+        expect(animations.some((name) => name !== 'none')).toBe(true);
+      } else {
+        expect(animations.every((name) => name === 'none')).toBe(true);
+      }
+    }
   }
 });
 
@@ -312,7 +332,7 @@ test('home page publishes Metaltech metadata', async ({ page }) => {
     ['meta[name="theme-color"]', '#050506'],
     [
       'meta[property="og:title"]',
-      'Neuramance® Metaltech - Give Your Agents Hands',
+      'Neuramance® Metaltech - Metal Parts for AI Agents',
     ],
   ] as const) {
     await expect(page.locator(selector)).toHaveAttribute('content', content);
@@ -521,18 +541,5 @@ test('reduced motion shows the still frame and loads no video player', async ({
   await expect(page.locator('body > div[aria-hidden] > div').first()).toHaveCSS(
     'background-image',
     `url("${POSTER}")`,
-  );
-});
-
-test('header credits the background video', async ({ page }) => {
-  await page.setViewportSize({ width: 1440, height: 900 });
-  await page.goto('/');
-  const credit = page
-    .getByRole('banner')
-    .getByRole('link', { name: 'Video — yaego, Eye to Eye ↗', exact: true });
-  await expect(credit).toBeVisible();
-  await expect(credit).toHaveAttribute(
-    'href',
-    'https://www.youtube.com/watch?v=AA3ixfYtq1g',
   );
 });
