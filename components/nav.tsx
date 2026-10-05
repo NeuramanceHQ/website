@@ -81,7 +81,7 @@ const styles = stylex.create({
     color: colors.foreground,
   },
   logotype: {
-    height: { default: 11, '@media (min-width: 30rem)': 13, [WIDE]: 14 },
+    height: { default: 18, '@media (min-width: 30rem)': 20, [WIDE]: 22 },
     width: 'auto',
     fill: 'currentColor',
   },

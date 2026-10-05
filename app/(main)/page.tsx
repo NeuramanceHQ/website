@@ -1,7 +1,8 @@
 import * as stylex from '@stylexjs/stylex';
-import { ArrowRight, Copy, Grip, Terminal } from 'lucide-react';
+import { ArrowRight, Copy, Terminal } from 'lucide-react';
 import Link from 'next/link';
 import { CopyButton } from '@/components/copy-button';
+import { Marquee } from '@/components/marquee';
 import { button, frame, tag } from '@/components/styles';
 import { ACCESS_HREF, AGENT_PROMPT } from '@/lib/site';
 import { colors, fonts } from '@/lib/tokens.stylex';
@@ -42,8 +43,6 @@ const FACTS = [
   ['CAD formats', 'STEP · DXF'],
   ['Quotes return as', 'Structured data'],
   ['Order status', 'In code'],
-  ['Processes', '4'],
-  ['Access', 'Private beta'],
   ['Shop', 'Austin, TX'],
 ];
 
@@ -78,7 +77,7 @@ export default function Page() {
         <div aria-hidden {...stylex.props(styles.dots)} />
         <div {...stylex.props(frame.base, styles.intro)}>
           <p {...stylex.props(tag.kicker)}>
-            Metal parts for AI agents
+            Metal parts ordered by AI agents
             <span {...stylex.props(tag.chip)}>Private beta</span>
           </p>
           <h1 {...stylex.props(styles.title)}>
@@ -230,14 +229,13 @@ export default function Page() {
         </div>
         <div {...stylex.props(styles.ticker)}>
           <div {...stylex.props(frame.base, styles.tickerRow)}>
-            <Grip aria-hidden {...stylex.props(styles.glyph)} />
-            <ul {...stylex.props(styles.facts)}>
+            <Marquee label="At a glance">
               {FACTS.map(([label, value]) => (
                 <li key={label} {...stylex.props(styles.fact)}>
                   {label}:<span {...stylex.props(tag.chip)}>{value}</span>
                 </li>
               ))}
-            </ul>
+            </Marquee>
           </div>
         </div>
       </div>
@@ -701,39 +699,23 @@ const styles = stylex.create({
   tickerRow: {
     display: 'flex',
     alignItems: 'center',
-    gap: '1rem',
     height: 56,
-  },
-  glyph: {
-    flexShrink: 0,
-    width: 18,
-    height: 18,
-    color: colors.faint,
-  },
-  facts: {
-    display: 'flex',
-    alignItems: 'center',
-    overflowX: 'auto',
-    scrollbarWidth: 'none',
-    listStyleType: 'none',
-    maskImage: 'linear-gradient(to right, black 85%, transparent)',
   },
   fact: {
     display: 'flex',
     flexShrink: 0,
     alignItems: 'center',
     gap: '0.625rem',
-    paddingRight: '1.25rem',
+    paddingInline: '1.25rem',
     fontSize: 13,
     fontWeight: 500,
     letterSpacing: '0.04em',
     textTransform: 'uppercase',
     whiteSpace: 'nowrap',
     color: colors.muted,
-    borderLeftWidth: { default: 1, ':first-child': 0 },
-    borderLeftStyle: 'solid',
-    borderLeftColor: colors.line,
-    paddingLeft: { default: '1.25rem', ':first-child': 0 },
+    borderRightWidth: 1,
+    borderRightStyle: 'solid',
+    borderRightColor: colors.line,
   },
   section: {
     display: 'flex',

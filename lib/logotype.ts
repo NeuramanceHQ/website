@@ -1,11 +1,7 @@
 type Polygon = readonly (readonly [number, number])[];
 
-const WIDTH = 100;
-const HEIGHT = 250;
-const BAR = 58;
-const STEM = 13;
-const GAP = 22;
-const EXTEND = 2.1;
+const HEIGHT = 596;
+const GAP = 56;
 
 const rect = (x: number, y: number, w: number, h: number): Polygon => [
   [x, y],
@@ -14,107 +10,149 @@ const rect = (x: number, y: number, w: number, h: number): Polygon => [
   [x, y + h],
 ];
 
-const LEFT = rect(0, 0, STEM, HEIGHT);
-const RIGHT = rect(WIDTH - STEM, 0, STEM, HEIGHT);
-
 const GLYPHS = {
-  N: [
-    LEFT,
-    RIGHT,
-    [
-      [0, 0],
-      [44, 0],
-      [WIDTH, HEIGHT],
-      [56, HEIGHT],
+  N: {
+    width: 296,
+    shapes: [
+      rect(0, 0, 46, 596),
+      rect(250, 0, 46, 596),
+      [
+        [46, 0],
+        [250, 447],
+        [250, 596],
+        [46, 149],
+      ],
     ],
-  ],
-  E: [
-    LEFT,
-    rect(0, 0, WIDTH, BAR),
-    rect(0, 96, 92, BAR),
-    rect(0, 192, WIDTH, BAR),
-  ],
-  U: [
-    rect(0, 0, STEM, 236),
-    rect(WIDTH - STEM, 0, STEM, 236),
-    [
-      [0, 192],
-      [WIDTH, 192],
-      [WIDTH, 236],
-      [86, HEIGHT],
-      [14, HEIGHT],
-      [0, 236],
+  },
+  E: {
+    width: 296,
+    shapes: [
+      rect(0, 0, 46, 596),
+      rect(0, 0, 288, 132),
+      rect(0, 225, 234, 131),
+      rect(0, 464, 296, 132),
     ],
-  ],
-  R: [
-    LEFT,
-    [
-      [0, 0],
-      [78, 0],
-      [WIDTH, 22],
-      [WIDTH, BAR],
-      [0, BAR],
+  },
+  U: {
+    width: 296,
+    shapes: [
+      rect(0, 0, 46, 402),
+      rect(250, 0, 46, 402),
+      [
+        [0, 402],
+        [46, 402],
+        [80, 464],
+        [216, 464],
+        [250, 402],
+        [296, 402],
+        [296, 510],
+        [232, 596],
+        [64, 596],
+        [0, 510],
+      ],
     ],
-    rect(WIDTH - STEM, BAR, STEM, 40),
-    [
-      [0, 96],
-      [WIDTH, 96],
-      [WIDTH, 132],
-      [78, 154],
-      [0, 154],
+  },
+  R: {
+    width: 288,
+    shapes: [
+      rect(0, 0, 46, 596),
+      [
+        [0, 0],
+        [224, 0],
+        [288, 86],
+        [288, 202],
+        [242, 202],
+        [242, 196],
+        [208, 134],
+        [0, 134],
+      ],
+      [
+        [0, 270],
+        [208, 270],
+        [242, 208],
+        [242, 202],
+        [288, 202],
+        [288, 306],
+        [254, 352],
+        [288, 414],
+        [288, 596],
+        [242, 596],
+        [242, 452],
+        [207, 402],
+        [0, 402],
+      ],
     ],
-    [
-      [60, 154],
-      [80, 154],
-      [WIDTH, 186],
-      [WIDTH, HEIGHT],
-      [WIDTH - STEM, HEIGHT],
-      [WIDTH - STEM, 192],
+  },
+  A: {
+    width: 296,
+    shapes: [
+      [
+        [128, 0],
+        [168, 0],
+        [241, 119],
+        [55, 119],
+      ],
+      [
+        [55, 119],
+        [128, 119],
+        [46, 254],
+        [46, 596],
+        [0, 596],
+        [0, 210],
+      ],
+      [
+        [168, 119],
+        [241, 119],
+        [296, 210],
+        [296, 596],
+        [250, 596],
+        [250, 254],
+      ],
+      rect(0, 339, 296, 133),
     ],
-  ],
-  A: [
-    [
-      [0, 30],
-      [30, 0],
-      [70, 0],
-      [WIDTH, 30],
-      [WIDTH, BAR],
-      [0, BAR],
+  },
+  M: {
+    width: 348,
+    shapes: [
+      rect(0, 0, 46, 596),
+      rect(302, 0, 46, 596),
+      [
+        [46, 80],
+        [154, 300],
+        [194, 300],
+        [302, 80],
+        [302, 221],
+        [194, 441],
+        [154, 441],
+        [46, 221],
+      ],
     ],
-    rect(0, 30, STEM, HEIGHT - 30),
-    rect(WIDTH - STEM, 30, STEM, HEIGHT - 30),
-    rect(0, 118, WIDTH, BAR),
-  ],
-  M: [
-    LEFT,
-    RIGHT,
-    [
-      [0, 0],
-      [34, 0],
-      [50, 58],
-      [66, 0],
-      [WIDTH, 0],
-      [50, 170],
+  },
+  C: {
+    width: 296,
+    shapes: [
+      rect(0, 86, 46, 424),
+      [
+        [64, 0],
+        [296, 0],
+        [296, 132],
+        [80, 132],
+        [46, 194],
+        [0, 194],
+        [0, 86],
+      ],
+      [
+        [0, 402],
+        [46, 402],
+        [80, 464],
+        [296, 464],
+        [296, 596],
+        [64, 596],
+        [0, 510],
+      ],
     ],
-  ],
-  C: [
-    [
-      [22, 0],
-      [WIDTH, 0],
-      [WIDTH, BAR],
-      [0, BAR],
-      [0, 22],
-    ],
-    rect(0, BAR, STEM, 134),
-    [
-      [0, 192],
-      [WIDTH, 192],
-      [WIDTH, HEIGHT],
-      [22, HEIGHT],
-      [0, 228],
-    ],
-  ],
-} satisfies Record<string, readonly Polygon[]>;
+  },
+} satisfies Record<string, { width: number; shapes: readonly Polygon[] }>;
 
 type Letter = keyof typeof GLYPHS;
 
@@ -130,17 +168,24 @@ const NAME: readonly Letter[] = [
   'C',
   'E',
 ];
-const span = (word: readonly Letter[]) => word.length * (WIDTH + GAP) - GAP;
+
+const typeset = NAME.reduce(
+  ({ x, path }, letter) => ({
+    x: x + GLYPHS[letter].width + GAP,
+    path:
+      path +
+      GLYPHS[letter].shapes
+        .map(
+          (polygon) =>
+            `M${polygon.map(([px, py]) => `${x + px} ${py}`).join('L')}Z`,
+        )
+        .join(''),
+  }),
+  { x: 0, path: '' },
+);
 
 export const WORDMARK = {
-  width: span(NAME) * EXTEND,
+  width: typeset.x - GAP,
   height: HEIGHT,
-  path: NAME.map((letter, index) =>
-    GLYPHS[letter]
-      .map(
-        (polygon) =>
-          `M${polygon.map(([px, py]) => `${(index * (WIDTH + GAP) + px) * EXTEND} ${py}`).join('L')}Z`,
-      )
-      .join(''),
-  ).join(''),
+  path: typeset.path,
 };

@@ -42,7 +42,7 @@ export function Footer() {
             </svg>
           </span>
           <p {...stylex.props(styles.tagline)}>
-            Metal parts for AI agents. Made in Austin, Texas.
+            Metal parts ordered by AI agents. Made in Austin, Texas.
           </p>
         </div>
         {COLUMNS.map((column) => (
@@ -114,7 +114,7 @@ const styles = stylex.create({
     color: colors.foreground,
   },
   logotype: {
-    height: 13,
+    height: 22,
     width: 'auto',
     fill: 'currentColor',
   },

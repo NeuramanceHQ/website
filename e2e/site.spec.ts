@@ -1,4 +1,4 @@
-import { expect, test } from '@playwright/test';
+import { expect, test, type Locator, type Page } from '@playwright/test';
 
 const YOUTUBE =
   /^https:\/\/([a-z0-9-]+\.)*(youtube|youtube-nocookie|ytimg|googlevideo)\.com\//;
@@ -211,8 +211,8 @@ test('the brand is Neuramance without Metaltech', async ({ page }) => {
   const wordmark = await home
     .locator('svg')
     .evaluate((svg) => svg.getBoundingClientRect().toJSON());
-  expect(wordmark.width / wordmark.height).toBeGreaterThan(8);
-  expect(wordmark.width / wordmark.height).toBeLessThan(12);
+  expect(wordmark.width / wordmark.height).toBeGreaterThan(5);
+  expect(wordmark.width / wordmark.height).toBeLessThan(7);
   expect(await page.locator('body').innerText()).not.toMatch(/metaltech/i);
   expect(await page.content()).not.toMatch(/metaltech/i);
 });
@@ -231,6 +231,80 @@ test('Announcement links to the agent guide and can be dismissed', async ({
     .getByRole('button', { name: 'Dismiss announcement', exact: true })
     .click();
   await expect(announcement).toHaveCount(0);
+});
+
+const marqueeLists = (page: Page) =>
+  page
+    .getByRole('list', { name: 'At a glance' })
+    .locator('xpath=..')
+    .locator('> ul');
+
+const translateX = (list: Locator) =>
+  list.evaluate(
+    (element) => new DOMMatrix(getComputedStyle(element).transform).m41,
+  );
+
+test('facts marquee loops two equal copies endlessly and pauses on demand', async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto('/');
+  const lists = marqueeLists(page);
+  await expect(lists).toHaveCount(2);
+  const [first, copy] = await lists.evaluateAll((elements) =>
+    elements.map((element) => ({
+      width: element.getBoundingClientRect().width,
+      viewport: element.parentElement?.getBoundingClientRect().width ?? 0,
+      animation: getComputedStyle(element).animationName,
+      iterations: getComputedStyle(element).animationIterationCount,
+    })),
+  );
+  expect(copy.width).toBeCloseTo(first.width, 1);
+  expect(first.width).toBeGreaterThanOrEqual(first.viewport);
+  for (const list of [first, copy]) {
+    expect(list.animation).not.toBe('none');
+    expect(list.iterations).toBe('infinite');
+  }
+
+  const before = await translateX(lists.first());
+  await page.waitForTimeout(500);
+  expect(await translateX(lists.first())).toBeLessThan(before);
+
+  const toggle = page.getByRole('button', {
+    name: 'Pause scrolling',
+    exact: true,
+  });
+  await toggle.click();
+  await expect(toggle).toHaveAttribute('aria-pressed', 'true');
+  for (const list of await lists.all()) {
+    await expect(list).toHaveCSS('animation-play-state', 'paused');
+  }
+  await page.waitForTimeout(200);
+  const paused = await translateX(lists.first());
+  await page.waitForTimeout(500);
+  expect(await translateX(lists.first())).toBeCloseTo(paused, 1);
+
+  await toggle.click();
+  await expect(toggle).toHaveAttribute('aria-pressed', 'false');
+  await expect(lists.first()).toHaveCSS('animation-play-state', 'running');
+});
+
+test('facts marquee stands still and scrolls by hand under reduced motion', async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  await page.goto('/');
+  const lists = marqueeLists(page);
+  await expect(lists.first()).toHaveCSS('animation-name', 'none');
+  await expect(lists.last()).toBeHidden();
+  await expect(
+    page.getByRole('button', { name: 'Pause scrolling', exact: true }),
+  ).toBeHidden();
+  await expect(lists.first().locator('xpath=..')).toHaveCSS(
+    'overflow-x',
+    'auto',
+  );
 });
 
 test('Copy agent prompt copies the exact prompt and resets within 4 seconds', async ({
