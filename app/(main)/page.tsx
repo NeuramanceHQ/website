@@ -97,10 +97,12 @@ export default function Page() {
             </p>
             <CopyButton
               text={AGENT_PROMPT}
+              data-metal
               {...stylex.props(
                 button.base,
-                button.lime,
+                button.metal,
                 button.large,
+                button.glint,
                 styles.submit,
               )}
             >
@@ -314,7 +316,7 @@ export default function Page() {
             <span {...stylex.props(styles.cardLabel)}>Agent prompt</span>
             <CopyButton
               text={AGENT_PROMPT}
-              {...stylex.props(button.base, button.light, button.small)}
+              {...stylex.props(button.base, button.ghost, button.small)}
             >
               <Copy aria-hidden {...stylex.props(button.icon)} />
               Copy agent prompt
@@ -338,13 +340,14 @@ export default function Page() {
           <div {...stylex.props(styles.actions)}>
             <CopyButton
               text={AGENT_PROMPT}
-              {...stylex.props(button.base, button.lime, button.large)}
+              data-metal
+              {...stylex.props(button.base, button.metal, button.large)}
             >
               Copy agent prompt
             </CopyButton>
             <a
               href={ACCESS_HREF}
-              {...stylex.props(button.base, button.light, button.large)}
+              {...stylex.props(button.base, button.ghost, button.large)}
             >
               Request access
             </a>
@@ -411,6 +414,7 @@ const styles = stylex.create({
     marginTop: '2rem',
     padding: '0.375rem',
     borderRadius: 14,
+    cornerShape: 'bevel',
     borderWidth: 1,
     borderStyle: 'solid',
     borderColor: 'rgb(255 255 255 / 0.14)',

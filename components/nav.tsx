@@ -58,7 +58,8 @@ export function Nav() {
         <div {...stylex.props(styles.actions)}>
           <a
             href={ACCESS_HREF}
-            {...stylex.props(button.base, button.lime, button.small)}
+            data-metal
+            {...stylex.props(button.base, button.metal, button.small)}
           >
             Request access
           </a>

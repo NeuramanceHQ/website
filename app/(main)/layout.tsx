@@ -2,6 +2,7 @@ import Link from 'next/link';
 import * as stylex from '@stylexjs/stylex';
 import { Announcement } from '@/components/announcement';
 import { Footer } from '@/components/footer';
+import { MetalLight } from '@/components/metal-light';
 import { Nav } from '@/components/nav';
 
 export default function Layout({ children }: LayoutProps<'/'>) {
@@ -16,6 +17,7 @@ export default function Layout({ children }: LayoutProps<'/'>) {
       <Nav />
       {children}
       <Footer />
+      <MetalLight />
     </>
   );
 }

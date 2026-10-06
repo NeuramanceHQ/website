@@ -43,7 +43,10 @@ test('home page renders its production styles', async ({ page }) => {
     .getByRole('main')
     .getByRole('button', { name: 'Copy agent prompt', exact: true })
     .first();
-  await expect(copy).toHaveCSS('background-color', 'rgb(228, 242, 34)');
+  await expect(copy).toHaveCSS(
+    'background-image',
+    /, linear-gradient\(rgb\(255, 255, 255\), rgb\(230, 231, 234\)\)$/,
+  );
   await expect(copy).toHaveCSS('height', '56px');
   await expect(
     page
@@ -324,6 +327,31 @@ test('facts marquee stands still and scrolls by hand under reduced motion', asyn
   );
 });
 
+test('the metal buttons catch the light as the pointer passes', async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto('/');
+  const copy = page
+    .getByRole('main')
+    .getByRole('button', { name: 'Copy agent prompt', exact: true })
+    .first();
+  const box = await copy.boundingBox();
+  if (box === null) {
+    throw new Error('Copy agent prompt has no bounding box');
+  }
+  const lightAt = async (x: number, y: number) => {
+    await page.mouse.move(0, 0);
+    await page.mouse.move(x, y);
+    return copy.evaluate((element) =>
+      element.style.getPropertyValue('--sheen-x'),
+    );
+  };
+  const middle = box.y + box.height / 2;
+  await expect.poll(() => lightAt(box.x + box.width / 2, middle)).toBe('50%');
+  await expect.poll(() => lightAt(box.x + box.width + 400, middle)).toBe('0%');
+});
+
 test('Copy agent prompt copies the exact prompt and resets within 4 seconds', async ({
   context,
   page,
@@ -334,10 +362,11 @@ test('Copy agent prompt copies the exact prompt and resets within 4 seconds', as
     .getByRole('main')
     .getByRole('button', { name: 'Copy agent prompt', exact: true })
     .first();
+  const before = await copy.boundingBox();
   await copy.click();
-  await expect(
-    page.getByRole('button', { name: 'Copied', exact: true }),
-  ).toBeVisible();
+  const copied = page.getByRole('button', { name: 'Copied', exact: true });
+  await expect(copied).toBeVisible();
+  expect((await copied.boundingBox())?.width).toBe(before?.width);
   expect(await page.evaluate(() => navigator.clipboard.readText())).toBe(
     PROMPT,
   );
