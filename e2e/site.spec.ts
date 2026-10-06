@@ -224,15 +224,22 @@ test('the brand is Neuramance without Metaltech', async ({ page }) => {
     .getByRole('banner')
     .getByRole('link', { name: 'Neuramance home', exact: true });
   await expect(home).toHaveAttribute('href', '/');
-  const wordmark = await home
-    .locator('svg')
-    .evaluate((svg) => svg.getBoundingClientRect().toJSON());
-  expect(wordmark.width / wordmark.height).toBeCloseTo(10, 1);
-  const hand = await home
-    .locator('img')
-    .evaluate((img) => img.getBoundingClientRect().toJSON());
-  expect(hand.height).toBe(26);
-  expect(hand.top + hand.bottom).toBe(wordmark.top + wordmark.bottom);
+  const footerLockup = page
+    .getByRole('contentinfo')
+    .locator('img[src="/hand.svg"]')
+    .locator('xpath=..');
+  for (const lockup of [home, footerLockup]) {
+    const wordmark = await lockup
+      .locator('svg')
+      .evaluate((svg) => svg.getBoundingClientRect().toJSON());
+    expect(wordmark.height).toBe(17);
+    expect(wordmark.width / wordmark.height).toBeCloseTo(10, 1);
+    const hand = await lockup
+      .locator('img')
+      .evaluate((img) => img.getBoundingClientRect().toJSON());
+    expect(hand.height).toBe(26);
+    expect(hand.top + hand.bottom).toBe(wordmark.top + wordmark.bottom);
+  }
   expect(await page.locator('body').innerText()).not.toMatch(/metaltech/i);
   expect(await page.content()).not.toMatch(/metaltech/i);
 });

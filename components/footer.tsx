@@ -3,7 +3,7 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { SoundButton } from '@/components/sound-button';
 import { frame } from '@/components/styles';
-import { WORDMARK } from '@/lib/logotype';
+import { REGISTERED_WORDMARK } from '@/lib/logotype';
 import { ACCESS_HREF, EMAIL } from '@/lib/site';
 import { colors } from '@/lib/tokens.stylex';
 
@@ -32,13 +32,17 @@ export function Footer() {
       <div {...stylex.props(frame.base, styles.top)}>
         <div {...stylex.props(styles.brand)}>
           <span {...stylex.props(styles.lockup)}>
-            <Image src="/hand.svg" alt="" width={16} height={20} />
+            <Image src="/hand.svg" alt="" width={21} height={26} />
             <svg
               aria-hidden
-              viewBox={`0 0 ${WORDMARK.width} ${WORDMARK.height}`}
+              viewBox={`0 0 ${REGISTERED_WORDMARK.width} ${REGISTERED_WORDMARK.height}`}
               {...stylex.props(styles.logotype)}
             >
-              <path d={WORDMARK.path} />
+              <path d={REGISTERED_WORDMARK.letters} />
+              <path
+                d={REGISTERED_WORDMARK.registered}
+                transform={REGISTERED_WORDMARK.registeredTransform}
+              />
             </svg>
           </span>
           <p {...stylex.props(styles.tagline)}>
@@ -114,7 +118,7 @@ const styles = stylex.create({
     color: colors.foreground,
   },
   logotype: {
-    height: 22,
+    height: 17,
     width: 'auto',
     fill: 'currentColor',
   },

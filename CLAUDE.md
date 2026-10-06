@@ -35,7 +35,7 @@ Done means `lint`, `format:check`, `typecheck`, `test`, `test:e2e`, and `build` 
 - `app/(main)/`: pages sharing the announcement bar, sticky header, and footer (`/`, `/waitlist`, `/error`); `error.tsx` renders the `/error` page as the error boundary
 - `components/`: `announcement` (dismissible top bar), `nav` (sticky header), `footer`, `marquee` (endless, pausable ticker), `video-background` (YouTube background fixed behind every page), `copy-button`, `sound-button` (all audio: one shared `Audio` element), `styles.ts` (shared StyleX styles: page frame, buttons, labels, panels)
 - `lib/tokens.stylex.ts`: design constants (`defineConsts`) for colors and fonts
-- `lib/logotype.ts`: the NEURAMANCE wordmarks (the custom-drawn one in the footer, and Chakra Petch Bold outlines with ® in the header); `lib/site.ts`: the access email, agent prompt, and video ID
+- `lib/logotype.ts`: the NEURAMANCE wordmark (Chakra Petch Bold outlines with ®) shared by the nav and footer; `lib/site.ts`: the access email, agent prompt, and video ID
 
 ## Styling
 
