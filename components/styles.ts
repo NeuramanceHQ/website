@@ -4,7 +4,7 @@ import { colors, fonts } from '@/lib/tokens.stylex';
 const HOVER = '@media (hover: hover)';
 const FOCUS_RING = `0 0 0 2px ${colors.background}, 0 0 0 4px ${colors.foreground}`;
 const METAL_EDGE =
-  'inset 0 1px 0 #ffffff, inset 0 -1px 0 rgb(0 0 0 / 0.12), 0 0 0 1px rgb(0 0 0 / 0.5)';
+  'inset 0 2px 0 #ffffff, inset 2px 0 0 rgb(255 255 255 / 0.7), inset 0 -2px 0 rgb(0 0 0 / 0.16), inset -2px 0 0 rgb(0 0 0 / 0.09), 0 0 0 1px rgb(0 0 0 / 0.5)';
 const METAL_RAISED = `${METAL_EDGE}, 0 3px 0 #8f939b, 0 3px 0 1px rgb(0 0 0 / 0.55), 0 12px 24px -8px rgb(0 0 0 / 0.75)`;
 const METAL_PRESSED = `${METAL_EDGE}, 0 0 0 #8f939b, 0 0 0 1px rgb(0 0 0 / 0.55), 0 4px 10px -6px rgb(0 0 0 / 0.7)`;
 const GHOST_EDGE =
@@ -14,13 +14,12 @@ const GHOST_EDGE_LIT =
 const SHEEN =
   'linear-gradient(105deg, transparent 32%, rgb(0 0 0 / 0.07) 42%, #ffffff 50%, rgb(0 0 0 / 0.07) 58%, transparent 68%)';
 
-const SHEEN_START = '100% 0, 0 0';
-const SHEEN_END = '0 0, 0 0';
-
-const glint = stylex.keyframes({
-  from: { backgroundPosition: SHEEN_START },
-  to: { backgroundPosition: SHEEN_END },
-});
+const TOOL_MARKS =
+  'repeating-radial-gradient(circle at 50% 260%, rgb(0 0 0 / 0.045) 0 1px, rgb(255 255 255 / 0.55) 1px 2px, transparent 2px 3px)';
+const REFLECTION =
+  'linear-gradient(100deg, transparent 25%, rgb(40 44 52 / 0.09) 45%, rgb(40 44 52 / 0.09) 55%, transparent 75%)';
+const PRESS_TILT =
+  'perspective(32rem) rotateX(calc(var(--tilt-y, 0) * -5deg)) rotateY(calc(var(--tilt-x, 0) * 5deg)) translateY(3px)';
 
 export const frame = stylex.create({
   base: {
@@ -54,18 +53,18 @@ export const button = stylex.create({
   },
   metal: {
     backgroundImage: {
-      default: `${SHEEN}, linear-gradient(#ffffff, #e6e7ea)`,
+      default: `${TOOL_MARKS}, ${SHEEN}, ${REFLECTION}, linear-gradient(#ffffff, #e6e7ea)`,
       [HOVER]: {
         default: null,
-        ':hover': `${SHEEN}, linear-gradient(#ffffff, #f1f2f4)`,
+        ':hover': `${TOOL_MARKS}, ${SHEEN}, ${REFLECTION}, linear-gradient(#ffffff, #f1f2f4)`,
       },
-      ':active': `${SHEEN}, linear-gradient(#e6e7ea, #f4f5f6)`,
+      ':active': `${TOOL_MARKS}, ${SHEEN}, ${REFLECTION}, linear-gradient(#e6e7ea, #f4f5f6)`,
     },
-    backgroundSize: '300% 100%, 100% 100%',
+    backgroundSize: '100% 100%, 300% 100%, 220% 100%, 100% 100%',
     backgroundRepeat: 'no-repeat',
-    backgroundPosition: 'var(--sheen-x, 100%) 0, 0 0',
+    backgroundPosition: '0 0, var(--sheen-x) 0, var(--sheen-x) 0, 0 0',
     textShadow: '0 1px 0 rgb(255 255 255 / 0.75)',
-    transform: { default: null, ':active': 'translateY(3px)' },
+    transform: { default: null, ':active': PRESS_TILT },
     transitionProperty: 'background-position, box-shadow, transform',
     transitionDuration: '700ms, 120ms, 120ms',
     transitionTimingFunction: 'cubic-bezier(0.2, 0.7, 0.2, 1)',
@@ -74,15 +73,6 @@ export const button = stylex.create({
       ':focus-visible': `${METAL_RAISED}, ${FOCUS_RING}`,
       ':active': METAL_PRESSED,
     },
-  },
-  glint: {
-    animationName: {
-      default: null,
-      '@media (prefers-reduced-motion: no-preference)': glint,
-    },
-    animationDuration: '1.1s',
-    animationDelay: '0.8s',
-    animationTimingFunction: 'cubic-bezier(0.4, 0, 0.2, 1)',
   },
   ghost: {
     color: colors.foreground,
@@ -110,6 +100,9 @@ export const button = stylex.create({
   icon: {
     width: '1em',
     height: '1em',
+  },
+  etched: {
+    filter: 'drop-shadow(0 1px 0 rgb(255 255 255 / 0.75))',
   },
 });
 

@@ -1,3 +1,9 @@
+@property --sheen-x {
+  syntax: '<percentage>';
+  inherits: false;
+  initial-value: 100%;
+}
+
 @layer resets {
   *,
   ::before,

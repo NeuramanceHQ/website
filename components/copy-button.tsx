@@ -76,7 +76,14 @@ export function CopyButton({
         {status && (
           <span key={status} {...stylex.props(styles.face, styles.status)}>
             {status === 'copied' && (
-              <Check aria-hidden {...stylex.props(button.icon, styles.check)} />
+              <Check
+                aria-hidden
+                {...stylex.props(
+                  button.icon,
+                  'data-metal' in props && button.etched,
+                  styles.check,
+                )}
+              />
             )}
             {LABELS[status]}
           </span>

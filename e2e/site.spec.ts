@@ -352,6 +352,57 @@ test('the metal buttons catch the light as the pointer passes', async ({
   await expect.poll(() => lightAt(box.x + box.width + 400, middle)).toBe('0%');
 });
 
+test('each metal button catches the light once as it comes into view', async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto('/');
+  const glints = (element: Locator) =>
+    element.evaluate(
+      (metal) =>
+        metal
+          .getAnimations()
+          .filter(
+            (animation) =>
+              animation.effect instanceof KeyframeEffect &&
+              animation.effect
+                .getKeyframes()
+                .some((keyframe) => '--sheen-x' in keyframe),
+          ).length,
+    );
+  const copies = page
+    .getByRole('main')
+    .getByRole('button', { name: 'Copy agent prompt', exact: true });
+  await expect.poll(() => glints(copies.first())).toBe(1);
+  const closing = copies.last();
+  expect(await glints(closing)).toBe(0);
+  await closing.scrollIntoViewIfNeeded();
+  await expect.poll(() => glints(closing)).toBe(1);
+});
+
+test('a metal button tilts toward where it is pressed', async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto('/');
+  const copy = page.getByRole('main').locator('[data-metal]').first();
+  await expect(copy).toHaveAccessibleName('Copy agent prompt');
+  const box = await copy.boundingBox();
+  if (box === null) {
+    throw new Error('Copy agent prompt has no bounding box');
+  }
+  const tilt = () =>
+    copy.evaluate((element) => element.style.getPropertyValue('--tilt-x'));
+  await page.mouse.move(box.x + box.width - 2, box.y + box.height / 2);
+  await expect
+    .poll(async () => {
+      await page.mouse.down();
+      const pressed = Number(await tilt());
+      await page.mouse.up();
+      return pressed;
+    })
+    .toBeGreaterThan(0.9);
+  expect(await tilt()).toBe('0');
+});
+
 test('Copy agent prompt copies the exact prompt and resets within 4 seconds', async ({
   context,
   page,

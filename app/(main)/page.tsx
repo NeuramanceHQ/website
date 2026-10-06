@@ -102,11 +102,10 @@ export default function Page() {
                 button.base,
                 button.metal,
                 button.large,
-                button.glint,
                 styles.submit,
               )}
             >
-              <Copy aria-hidden {...stylex.props(button.icon)} />
+              <Copy aria-hidden {...stylex.props(button.icon, button.etched)} />
               Copy agent prompt
             </CopyButton>
           </div>
