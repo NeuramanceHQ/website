@@ -54,8 +54,10 @@ test('home page renders its production styles', async ({ page }) => {
 
 for (const [width, height] of [
   [320, 568],
+  [360, 800],
   [375, 667],
   [390, 844],
+  [400, 800],
   [768, 1024],
   [1024, 600],
   [1024, 768],
@@ -66,7 +68,7 @@ for (const [width, height] of [
   [932, 430],
   [667, 375],
 ] as const) {
-  test(`home page fits ${width}px wide and keeps Request access in the sticky header at ${width}x${height}`, async ({
+  test(`home page fits ${width}px wide and keeps a ${width < 400 ? 13 : 17}px wordmark and Request access in the sticky header at ${width}x${height}`, async ({
     page,
   }) => {
     await page.setViewportSize({ width, height });
@@ -74,6 +76,12 @@ for (const [width, height] of [
     expect(
       await page.evaluate(() => document.documentElement.scrollWidth),
     ).toBeLessThanOrEqual(width);
+    await expect(
+      page
+        .getByRole('banner')
+        .getByRole('link', { name: 'Neuramance home', exact: true })
+        .locator('svg'),
+    ).toHaveCSS('height', width < 400 ? '13px' : '17px');
     const headline = await page
       .getByRole('heading', { name: HEADLINE, level: 1, exact: true })
       .boundingBox();
@@ -96,6 +104,11 @@ for (const [width, height] of [
       );
       await expect(access).toBeInViewport({ ratio: 1 });
     }
+    const accessBox = await access.boundingBox();
+    if (accessBox === null) {
+      throw new Error('Request access has no bounding box');
+    }
+    expect(accessBox.x + accessBox.width).toBeLessThanOrEqual(width - 16);
   });
 }
 
@@ -211,8 +224,12 @@ test('the brand is Neuramance without Metaltech', async ({ page }) => {
   const wordmark = await home
     .locator('svg')
     .evaluate((svg) => svg.getBoundingClientRect().toJSON());
-  expect(wordmark.width / wordmark.height).toBeGreaterThan(5);
-  expect(wordmark.width / wordmark.height).toBeLessThan(7);
+  expect(wordmark.width / wordmark.height).toBeCloseTo(10, 1);
+  const hand = await home
+    .locator('img')
+    .evaluate((img) => img.getBoundingClientRect().toJSON());
+  expect(hand.height).toBe(26);
+  expect(hand.top + hand.bottom).toBe(wordmark.top + wordmark.bottom);
   expect(await page.locator('body').innerText()).not.toMatch(/metaltech/i);
   expect(await page.content()).not.toMatch(/metaltech/i);
 });

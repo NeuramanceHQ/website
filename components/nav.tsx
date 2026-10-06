@@ -2,10 +2,12 @@ import * as stylex from '@stylexjs/stylex';
 import Image from 'next/image';
 import Link from 'next/link';
 import { button, frame } from '@/components/styles';
-import { WORDMARK } from '@/lib/logotype';
+import { REGISTERED_WORDMARK } from '@/lib/logotype';
 import { ACCESS_HREF } from '@/lib/site';
 import { colors } from '@/lib/tokens.stylex';
 
+const ROOMY = '@media (min-width: 22.5rem)';
+const FULL_LOGO = '@media (min-width: 25rem)';
 const WIDE = '@media (min-width: 64rem)';
 
 const LINKS = [
@@ -23,13 +25,23 @@ export function Nav() {
           aria-label="Neuramance home"
           {...stylex.props(styles.lockup)}
         >
-          <Image src="/hand.svg" alt="" width={16} height={20} />
+          <Image
+            src="/hand.svg"
+            alt=""
+            width={21}
+            height={26}
+            {...stylex.props(styles.hand)}
+          />
           <svg
             aria-hidden
-            viewBox={`0 0 ${WORDMARK.width} ${WORDMARK.height}`}
+            viewBox={`0 0 ${REGISTERED_WORDMARK.width} ${REGISTERED_WORDMARK.height}`}
             {...stylex.props(styles.logotype)}
           >
-            <path d={WORDMARK.path} />
+            <path d={REGISTERED_WORDMARK.letters} />
+            <path
+              d={REGISTERED_WORDMARK.registered}
+              transform={REGISTERED_WORDMARK.registeredTransform}
+            />
           </svg>
         </Link>
         <nav aria-label="Primary" {...stylex.props(styles.links)}>
@@ -70,18 +82,23 @@ const styles = stylex.create({
   bar: {
     display: 'flex',
     alignItems: 'center',
-    gap: { default: '1rem', [WIDE]: '2.5rem' },
+    gap: { default: '0.5rem', [ROOMY]: '1rem', [WIDE]: '2.5rem' },
     height: 64,
   },
   lockup: {
     display: 'flex',
     flexShrink: 0,
     alignItems: 'center',
-    gap: '0.625rem',
+    gap: { default: '0.5rem', [FULL_LOGO]: '0.625rem' },
     color: colors.foreground,
   },
+  hand: {
+    display: { default: 'none', [ROOMY]: 'block' },
+    height: { default: 20, [FULL_LOGO]: 26 },
+    width: 'auto',
+  },
   logotype: {
-    height: { default: 18, '@media (min-width: 30rem)': 20, [WIDE]: 22 },
+    height: { default: 13, [FULL_LOGO]: 17 },
     width: 'auto',
     fill: 'currentColor',
   },
