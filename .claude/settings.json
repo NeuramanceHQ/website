@@ -23,29 +23,5 @@
       "Read(./config/credentials.json)",
       "Read(./build)"
     ]
-  },
-  "hooks": {
-    "Notification": [
-      {
-        "matcher": "",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "afplay /System/Library/Sounds/Blow.aiff"
-          }
-        ]
-      }
-    ],
-    "Stop": [
-      {
-        "matcher": "",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "afplay /System/Library/Sounds/Blow.aiff"
-          }
-        ]
-      }
-    ]
   }
 }
