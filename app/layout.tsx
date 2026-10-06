@@ -117,7 +117,7 @@ export default function RootLayout({ children }: LayoutProps<'/'>) {
           dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData) }}
         />
       </head>
-      <body {...stylex.props(styles.body)}>
+      <body {...stylex.props(styles.body)} suppressHydrationWarning>
         <VideoBackground videoId={BACKGROUND_VIDEO_ID} />
         {children}
       </body>
