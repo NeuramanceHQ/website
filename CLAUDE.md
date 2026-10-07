@@ -10,21 +10,22 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 
 # Neuramance website
 
-Static marketing site: no backend, database, or auth.
+Static marketing site: no backend, database, or auth. `next build` exports it to `out/` (`output: 'export'`), which Caddy serves from i9 behind Cloudflare Tunnel at `neuramance.com`; `www` 301s there.
 
-Stack: Next.js 16 App Router with Turbopack, React 19, TypeScript 7, StyleX, Base UI, Bun, Node 24 LTS, Vitest with Testing Library, Playwright, Oxlint, Oxfmt.
+Stack: Next.js 16 App Router with Turbopack, React 19, TypeScript 7, StyleX, Base UI, Bun, Node 24 LTS, Vitest with Testing Library, Playwright, Oxlint, Oxfmt, Caddy.
 
 ## Commands
 
 Use Bun only, and run scripts with `bun run` (`bun test` starts Bun's runner, not Vitest).
 
 - `bun run dev`: development server
-- `bun run build`, `bun run start`: production build and server
+- `bun run build`: static export to `out/`
+- `bun run start`: serves `out/` on port 3100 with the production `Caddyfile` (needs `caddy`)
 - `bun run lint`: Oxlint, type-aware, warnings fail
 - `bun run format`, `bun run format:check`: Oxfmt
 - `bun run typecheck`: route types, then `tsc`
 - `bun run test`: Vitest component tests
-- `bun run test:e2e`: Playwright against a fresh production build on port 3100
+- `bun run test:e2e`: Playwright against a fresh build served by `bun run start`
 
 Done means `lint`, `format:check`, `typecheck`, `test`, `test:e2e`, and `build` all pass.
 
@@ -36,6 +37,11 @@ Done means `lint`, `format:check`, `typecheck`, `test`, `test:e2e`, and `build` 
 - `components/`: `announcement` (dismissible top bar), `nav` (sticky header), `footer`, `marquee` (endless, pausable ticker), `video-background` (YouTube background fixed behind every page), `copy-button`, `sound-button` (one shared `Audio` element for the audio quote), `music` (header toggle for the background track: Web Audio decodes the clip once, mixes its first 4 seconds into its last 4 with equal-power curves, and loops from 4 seconds to the end; autoplays where the browser allows it and otherwise on the next interaction, remembers a mute), `metal-light` (mounted in the layout: moves the reflection on `[data-metal]` buttons with the pointer, glints each once when it comes into view, tilts it toward a press), `styles.ts` (shared StyleX styles: page frame, buttons, labels, panels)
 - `lib/tokens.stylex.ts`: design constants (`defineConsts`) for colors and fonts
 - `lib/logotype.ts`: the NEURAMANCE wordmark (Chakra Petch Bold outlines with ®) shared by the nav and footer; `lib/site.ts`: the access email, agent prompt, video ID, and music track; the licensed track is served from i9's `/srv/media` at `media.neuramance.com` with a content-hashed name, never committed to this public repo
+
+## Hosting
+
+- `Caddyfile`: the site's serving rules (clean URLs, the 404 page, security headers, caching, trailing-slash and `www` redirects). Production imports it as `/etc/caddy/neuramance.caddy`; after changing it, run `sudo install -m 644 Caddyfile /etc/caddy/neuramance.caddy && sudo systemctl reload caddy`. `Caddyfile.local` wraps it for `bun run start`.
+- Deploys: the `neuramance-deploy` systemd user timer runs `scripts/deploy` every minute. It builds `origin/main` into `/srv/neuramance/releases/<sha>`, switches the `/srv/neuramance/current` symlink, keeps five releases, and reports a `deploy/i9` commit status on GitHub. It skips a commit recorded in `/srv/neuramance/failed`, and refuses to deploy while `Caddyfile` differs from the installed copy. Logs: `journalctl --user -u neuramance-deploy`. Roll back by reverting on `main`.
 
 ## Styling
 

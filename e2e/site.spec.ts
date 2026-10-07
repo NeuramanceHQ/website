@@ -834,6 +834,59 @@ test('Play audio quote requests /audio/dune1-intro.mp3', async ({ page }) => {
   await audioRequest;
 });
 
+test('the server sends security headers and caches only hashed assets for good', async ({
+  page,
+  request,
+}) => {
+  const security = {
+    'strict-transport-security': 'max-age=63072000',
+    'x-frame-options': 'DENY',
+    'x-content-type-options': 'nosniff',
+    'referrer-policy': 'strict-origin-when-cross-origin',
+    'permissions-policy':
+      'camera=(), microphone=(), geolocation=(), browsing-topics=()',
+  };
+  const assets: string[] = [];
+  page.on('response', (response) => {
+    if (new URL(response.url()).pathname.startsWith('/_next/static/')) {
+      assets.push(response.url());
+    }
+  });
+  await page.goto('/');
+  const [asset] = assets;
+  if (asset === undefined) {
+    throw new Error('The home page loaded no hashed assets');
+  }
+  for (const [path, cache] of [
+    ['/', 'public, max-age=0, must-revalidate'],
+    ['/about', 'public, max-age=0, must-revalidate'],
+    [new URL(asset).pathname, 'public, max-age=31536000, immutable'],
+  ] as const) {
+    const response = await request.get(path);
+    expect(response.headers()).toMatchObject({
+      ...security,
+      'cache-control': cache,
+    });
+  }
+});
+
+test('trailing slashes and the www host redirect to the canonical URL', async ({
+  request,
+}) => {
+  const slash = await request.get('/waitlist/?ref=x', { maxRedirects: 0 });
+  expect(slash.status()).toBe(308);
+  expect(slash.headers()['location']).toBe('/waitlist?ref=x');
+
+  const www = await request.get('/waitlist?ref=x', {
+    headers: { host: `www.neuramance.com:${new URL(slash.url()).port}` },
+    maxRedirects: 0,
+  });
+  expect(www.status()).toBe(301);
+  expect(www.headers()['location']).toBe(
+    'https://neuramance.com/waitlist?ref=x',
+  );
+});
+
 test('/about returns status 404', async ({ page }) => {
   const response = await page.goto('/about');
   expect(response?.status()).toBe(404);

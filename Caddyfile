@@ -1,0 +1,32 @@
+{$SITE_ADDRESS:http://neuramance.com} {
+	bind 127.0.0.1
+	root * {$SITE_ROOT:/srv/neuramance/current}
+	log
+	encode zstd gzip
+	header {
+		Strict-Transport-Security "max-age=63072000"
+		X-Frame-Options DENY
+		X-Content-Type-Options nosniff
+		Referrer-Policy strict-origin-when-cross-origin
+		Permissions-Policy "camera=(), microphone=(), geolocation=(), browsing-topics=()"
+	}
+	@hashed path /_next/static/*
+	header @hashed Cache-Control "public, max-age=31536000, immutable"
+	@unhashed not path /_next/static/*
+	header @unhashed Cache-Control "public, max-age=0, must-revalidate"
+	@trailingSlash path_regexp trailingSlash ^(.+)/$
+	redir @trailingSlash {re.trailingSlash.1}{?query} 308
+	try_files {path} {path}.html
+	file_server
+	handle_errors 404 {
+		rewrite * /404.html
+		file_server
+	}
+}
+
+{$WWW_ADDRESS:http://www.neuramance.com} {
+	bind 127.0.0.1
+	log
+	header Strict-Transport-Security "max-age=63072000"
+	redir https://neuramance.com{uri} 301
+}

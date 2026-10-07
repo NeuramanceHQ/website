@@ -1,0 +1,6 @@
+{
+	admin off
+	persist_config off
+}
+
+import Caddyfile

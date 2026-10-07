@@ -3,7 +3,7 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
-    "start": "next start",
+    "start": "SITE_ADDRESS=http://127.0.0.1:3100 WWW_ADDRESS=http://www.neuramance.com:3100 SITE_ROOT=out caddy run --adapter caddyfile --config Caddyfile.local",
     "lint": "oxlint",
     "format": "oxfmt",
     "format:check": "oxfmt --check",

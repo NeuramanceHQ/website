@@ -1,0 +1,48 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+site=/srv/neuramance
+repo=$(cd "$(dirname "$0")/.." && pwd)
+
+exec 9>"$site/deploy.lock"
+flock --nonblock 9 || exit 0
+
+timeout 60 git -C "$repo" fetch --quiet origin main
+sha=$(git -C "$repo" rev-parse FETCH_HEAD)
+[ "$(readlink "$site/current" || true)" = "releases/$sha" ] && exit 0
+if [ "$(cat "$site/failed" 2>/dev/null || true)" = "$sha" ]; then
+    echo "$sha failed before; delete $site/failed to retry it"
+    exit 0
+fi
+
+report() {
+    timeout 30 gh api --silent "repos/NeuramanceHQ/website/statuses/$sha" \
+        -f state="$1" -f context=deploy/i9 -f description="$2" -f target_url=https://neuramance.com \
+        || echo "could not report $1 to GitHub" >&2
+}
+
+fail() {
+    echo "$sha: $1" >&2
+    echo "$sha" > "$site/failed"
+    report failure "$1"
+    exit 1
+}
+
+if [ ! -d "$site/releases/$sha" ]; then
+    build=$(mktemp -d "$site/build.XXXXXX")
+    trap 'rm -rf "$build"' EXIT
+    report pending "Building on i9"
+    git -C "$repo" archive "$sha" | tar -x -C "$build"
+    cmp -s "$build/Caddyfile" /etc/caddy/neuramance.caddy \
+        || fail "Caddyfile differs from /etc/caddy/neuramance.caddy; install it with sudo"
+    (cd "$build" && timeout 300 bun install --frozen-lockfile && timeout 900 bun run build) \
+        || fail "build failed"
+    mkdir -p "$site/releases"
+    mv "$build/out" "$site/releases/$sha"
+fi
+touch "$site/releases/$sha"
+ln -sfn "releases/$sha" "$site/current.next"
+mv -T "$site/current.next" "$site/current"
+report success "Live on neuramance.com"
+echo "$sha is live"
+ls -1t "$site/releases" | tail -n +6 | while read -r old; do rm -rf "${site:?}/releases/$old"; done
