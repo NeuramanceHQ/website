@@ -6,36 +6,32 @@ import { useEffect, useSyncExternalStore } from 'react';
 import { button } from '@/components/styles';
 import { MUSIC } from '@/lib/site';
 
-const LOOP_SECONDS = 90;
 const CROSSFADE_SECONDS = 4;
 const RAMP_SECONDS = 0.8;
 const VOLUME = 0.6;
-const LOOKAHEAD_SECONDS = 2;
-const SCHEDULER_MS = 500;
-const CURVE_STEPS = 64;
+const LOAD_TIMEOUT_MS = 60_000;
+const LOAD_ATTEMPTS = 3;
+const RETRY_DELAY_MS = 1000;
 const STORAGE_KEY = 'music';
 const ROOM_QUERY = '(min-width: 30rem)';
 const UNLOCK_EVENTS = ['pointerdown', 'keydown', 'touchend', 'click'];
 
-export function equalPowerCurves(steps: number) {
-  const fadeIn = new Float32Array(steps);
-  const fadeOut = new Float32Array(steps);
-  for (let step = 0; step < steps; step++) {
-    const angle = (step / (steps - 1)) * (Math.PI / 2);
-    fadeIn[step] = Math.sin(angle);
-    fadeOut[step] = Math.cos(angle);
+export function bakeCrossfade(samples: Float32Array, fadeLength: number) {
+  const tail = samples.length - fadeLength;
+  for (let index = 0; index < fadeLength; index++) {
+    const angle = (index / fadeLength) * (Math.PI / 2);
+    samples[tail + index] =
+      samples[tail + index] * Math.cos(angle) +
+      samples[index] * Math.sin(angle);
   }
-  return { fadeIn, fadeOut };
 }
-
-const { fadeIn, fadeOut } = equalPowerCurves(CURVE_STEPS);
 
 type Engine = {
   context: AudioContext;
   master: GainNode;
-  buffer: Promise<AudioBuffer | undefined>;
-  nextStart: number;
-  timer: number;
+  buffer?: Promise<AudioBuffer | undefined>;
+  source?: AudioBufferSourceNode;
+  suspendTimer: number;
 };
 
 let engine: Engine | undefined;
@@ -78,23 +74,54 @@ function audible() {
   return getWanted() && !document.hidden && matchMedia(ROOM_QUERY).matches;
 }
 
+function transient(error: unknown) {
+  return (
+    error instanceof TypeError ||
+    (error instanceof DOMException && error.name === 'TimeoutError')
+  );
+}
+
+async function fetchTrack() {
+  for (let attempt = 1; ; attempt++) {
+    try {
+      const response = await fetch(MUSIC.src, {
+        priority: 'low',
+        signal: AbortSignal.timeout(LOAD_TIMEOUT_MS),
+      });
+      if (response.ok) return await response.arrayBuffer();
+      const retryable = response.status === 429 || response.status >= 500;
+      if (!retryable || attempt === LOAD_ATTEMPTS) {
+        throw new Error(`${MUSIC.src}: HTTP ${response.status}`);
+      }
+    } catch (error) {
+      if (!transient(error) || attempt === LOAD_ATTEMPTS) throw error;
+    }
+    await new Promise((resolve) =>
+      setTimeout(resolve, RETRY_DELAY_MS * 2 ** (attempt - 1)),
+    );
+  }
+}
+
 async function loadTrack(context: AudioContext) {
   try {
-    const response = await fetch(MUSIC.src, { priority: 'low' });
-    if (!response.ok) {
-      throw new Error(`${MUSIC.src}: HTTP ${response.status}`);
+    const buffer = await context.decodeAudioData(await fetchTrack());
+    if (buffer.duration <= 2 * CROSSFADE_SECONDS) {
+      throw new Error(`${MUSIC.src}: ${buffer.duration}s is too short to loop`);
     }
-    return await context.decodeAudioData(await response.arrayBuffer());
+    const fadeLength = Math.round(CROSSFADE_SECONDS * buffer.sampleRate);
+    for (let channel = 0; channel < buffer.numberOfChannels; channel++) {
+      bakeCrossfade(buffer.getChannelData(channel), fadeLength);
+    }
+    return buffer;
   } catch (error) {
     reportError(error);
-    setWanted(false);
     return undefined;
   }
 }
 
 function ensureEngine() {
   if (engine) return engine;
-  const context = new AudioContext();
+  const context = new AudioContext({ latencyHint: 'playback' });
   const master = context.createGain();
   master.gain.value = 0;
   master.connect(context.destination);
@@ -118,52 +145,8 @@ function ensureEngine() {
     }
     void sync();
   });
-  engine = {
-    context,
-    master,
-    buffer: loadTrack(context),
-    nextStart: 0,
-    timer: 0,
-  };
+  engine = { context, master, suspendTimer: 0 };
   return engine;
-}
-
-function playCycle(
-  { context, master }: Engine,
-  buffer: AudioBuffer,
-  start: number,
-) {
-  const source = context.createBufferSource();
-  source.buffer = buffer;
-  const gain = context.createGain();
-  gain.gain.setValueCurveAtTime(fadeIn, start, CROSSFADE_SECONDS);
-  gain.gain.setValueCurveAtTime(
-    fadeOut,
-    start + LOOP_SECONDS - CROSSFADE_SECONDS,
-    CROSSFADE_SECONDS,
-  );
-  source.connect(gain).connect(master);
-  source.addEventListener('ended', () => gain.disconnect());
-  source.start(start, 0, LOOP_SECONDS);
-}
-
-function startScheduler(current: Engine, buffer: AudioBuffer) {
-  if (current.timer) return;
-  current.nextStart = Math.max(
-    current.nextStart,
-    current.context.currentTime + 0.05,
-  );
-  const schedule = () => {
-    while (
-      current.nextStart - current.context.currentTime <
-      LOOKAHEAD_SECONDS
-    ) {
-      playCycle(current, buffer, current.nextStart);
-      current.nextStart += LOOP_SECONDS - CROSSFADE_SECONDS;
-    }
-  };
-  schedule();
-  current.timer = window.setInterval(schedule, SCHEDULER_MS);
 }
 
 function rampTo({ context, master }: Engine, level: number) {
@@ -174,11 +157,10 @@ function rampTo({ context, master }: Engine, level: number) {
 }
 
 function pause(current: Engine) {
-  window.clearInterval(current.timer);
-  current.timer = 0;
-  if (current.context.state !== 'running') return;
+  if (current.context.state !== 'running' || current.suspendTimer) return;
   rampTo(current, 0);
-  window.setTimeout(() => {
+  current.suspendTimer = window.setTimeout(() => {
+    current.suspendTimer = 0;
     if (!audible()) void current.context.suspend();
   }, RAMP_SECONDS * 1000);
 }
@@ -189,18 +171,39 @@ async function sync() {
     return;
   }
   const current = ensureEngine();
+  window.clearTimeout(current.suspendTimer);
+  current.suspendTimer = 0;
   if (current.context.state === 'suspended') void current.context.resume();
+  current.buffer ??= loadTrack(current.context);
   const buffer = await current.buffer;
-  if (!buffer || current.context.state !== 'running' || !audible()) return;
-  startScheduler(current, buffer);
+  if (!buffer) {
+    current.buffer = undefined;
+    setWanted(false);
+    pause(current);
+    return;
+  }
+  if (current.context.state !== 'running' || !audible()) return;
+  if (!current.source) {
+    const source = current.context.createBufferSource();
+    source.buffer = buffer;
+    source.loop = true;
+    source.loopStart = CROSSFADE_SECONDS;
+    source.loopEnd = buffer.duration;
+    source.connect(current.master);
+    source.start();
+    current.source = source;
+  }
   rampTo(current, VOLUME);
 }
 
 function toggle() {
+  if (getWanted() && engine?.context.state === 'suspended' && audible()) {
+    void engine.context.resume();
+    return;
+  }
   const on = !getWanted();
   saveChoice(on);
   setWanted(on);
-  if (on && engine) void engine.context.resume();
   void sync();
 }
 

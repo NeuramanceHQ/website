@@ -18,6 +18,9 @@ const TOOL_MARKS =
   'repeating-radial-gradient(circle at 50% 260%, rgb(0 0 0 / 0.045) 0 1px, rgb(255 255 255 / 0.55) 1px 2px, transparent 2px 3px)';
 const REFLECTION =
   'linear-gradient(100deg, transparent 25%, rgb(40 44 52 / 0.09) 45%, rgb(40 44 52 / 0.09) 55%, transparent 75%)';
+const METAL_FACE = `${TOOL_MARKS}, ${SHEEN}, ${REFLECTION}, linear-gradient(#ffffff, #e6e7ea)`;
+const METAL_FACE_LIT = `${TOOL_MARKS}, ${SHEEN}, ${REFLECTION}, linear-gradient(#ffffff, #f1f2f4)`;
+const METAL_FACE_PRESSED = `${TOOL_MARKS}, ${SHEEN}, ${REFLECTION}, linear-gradient(#e6e7ea, #f4f5f6)`;
 const PRESS_TILT =
   'perspective(32rem) rotateX(calc(var(--tilt-y, 0) * -5deg)) rotateY(calc(var(--tilt-x, 0) * 5deg)) translateY(3px)';
 
@@ -46,19 +49,19 @@ export const button = stylex.create({
     whiteSpace: 'nowrap',
     cursor: 'pointer',
     color: colors.ink,
-    boxShadow: { default: null, ':focus-visible': FOCUS_RING },
     transform: { default: null, ':active': 'translateY(1px)' },
     transitionProperty: 'background-color, box-shadow, transform',
     transitionDuration: '120ms',
   },
   metal: {
     backgroundImage: {
-      default: `${TOOL_MARKS}, ${SHEEN}, ${REFLECTION}, linear-gradient(#ffffff, #e6e7ea)`,
+      default: METAL_FACE,
       [HOVER]: {
         default: null,
-        ':hover': `${TOOL_MARKS}, ${SHEEN}, ${REFLECTION}, linear-gradient(#ffffff, #f1f2f4)`,
+        ':hover': METAL_FACE_LIT,
+        ':active': METAL_FACE_PRESSED,
       },
-      ':active': `${TOOL_MARKS}, ${SHEEN}, ${REFLECTION}, linear-gradient(#e6e7ea, #f4f5f6)`,
+      ':active': METAL_FACE_PRESSED,
     },
     backgroundSize: '100% 100%, 300% 100%, 220% 100%, 100% 100%',
     backgroundRepeat: 'no-repeat',
@@ -70,7 +73,7 @@ export const button = stylex.create({
     transitionTimingFunction: 'cubic-bezier(0.2, 0.7, 0.2, 1)',
     boxShadow: {
       default: METAL_RAISED,
-      ':focus-visible': `${METAL_RAISED}, ${FOCUS_RING}`,
+      ':focus-visible': `${FOCUS_RING}, ${METAL_RAISED}`,
       ':active': METAL_PRESSED,
     },
   },
@@ -82,8 +85,8 @@ export const button = stylex.create({
     },
     boxShadow: {
       default: GHOST_EDGE,
-      [HOVER]: { default: null, ':hover': GHOST_EDGE_LIT },
-      ':focus-visible': `${GHOST_EDGE}, ${FOCUS_RING}`,
+      [HOVER]: { default: null, ':hover:not(:focus-visible)': GHOST_EDGE_LIT },
+      ':focus-visible': `${FOCUS_RING}, ${GHOST_EDGE}`,
     },
     backdropFilter: 'blur(8px)',
   },

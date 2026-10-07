@@ -1,5 +1,6 @@
 'use client';
 
+import { usePathname } from 'next/navigation';
 import { useEffect } from 'react';
 
 const REACH = 160;
@@ -10,11 +11,15 @@ const GLINT: KeyframeAnimationOptions = {
   easing: 'cubic-bezier(0.4, 0, 0.2, 1)',
 };
 
+const glinted = new WeakSet<Element>();
+
 export function MetalLight() {
+  const pathname = usePathname();
   useEffect(() => {
     if (matchMedia('(prefers-reduced-motion: reduce)').matches) {
       return;
     }
+    const lit = new WeakSet<Element>();
     let pointer: { x: number; y: number } | undefined;
     let frame = 0;
     const light = () => {
@@ -22,18 +27,24 @@ export function MetalLight() {
       if (pointer === undefined) {
         return;
       }
-      for (const metal of document.querySelectorAll<HTMLElement>(
-        '[data-metal]',
-      )) {
-        const box = metal.getBoundingClientRect();
+      const { x, y } = pointer;
+      const measured = Array.from(
+        document.querySelectorAll<HTMLElement>('[data-metal]'),
+        (metal) => [metal, metal.getBoundingClientRect()] as const,
+      );
+      for (const [metal, box] of measured) {
+        const across = (x - box.left + REACH) / (box.width + 2 * REACH);
         const near =
-          pointer.x > box.left - REACH &&
-          pointer.x < box.right + REACH &&
-          pointer.y > box.top - REACH &&
-          pointer.y < box.bottom + REACH;
-        const across = (pointer.x - box.left + REACH) / (box.width + 2 * REACH);
-        const sheen = near ? 1 - across : across < 0.5 ? 1 : 0;
-        metal.style.setProperty('--sheen-x', `${sheen * 100}%`);
+          x > box.left - REACH &&
+          x < box.right + REACH &&
+          y > box.top - REACH &&
+          y < box.bottom + REACH;
+        if (near) {
+          lit.add(metal);
+          metal.style.setProperty('--sheen-x', `${(1 - across) * 100}%`);
+        } else if (lit.delete(metal)) {
+          metal.style.setProperty('--sheen-x', across < 0.5 ? '100%' : '0%');
+        }
       }
     };
     const schedule = () => {
@@ -46,8 +57,9 @@ export function MetalLight() {
     const glints = new IntersectionObserver(
       (entries) => {
         entries
-          .filter((entry) => entry.isIntersecting)
+          .filter((entry) => entry.isIntersecting && !glinted.has(entry.target))
           .forEach((entry, order) => {
+            glinted.add(entry.target);
             glints.unobserve(entry.target);
             entry.target.animate(
               [{ '--sheen-x': '100%' }, { '--sheen-x': '0%' }],
@@ -58,11 +70,11 @@ export function MetalLight() {
       { threshold: 0.6 },
     );
     for (const metal of document.querySelectorAll('[data-metal]')) {
-      glints.observe(metal);
+      if (!glinted.has(metal)) glints.observe(metal);
     }
     let pressed: HTMLElement | undefined;
     const press = (event: PointerEvent) => {
-      if (!(event.target instanceof Element)) {
+      if (event.button !== 0 || !(event.target instanceof Element)) {
         return;
       }
       pressed = event.target.closest<HTMLElement>('[data-metal]') ?? undefined;
@@ -100,6 +112,6 @@ export function MetalLight() {
       removeEventListener('scroll', schedule);
       cancelAnimationFrame(frame);
     };
-  }, []);
+  }, [pathname]);
   return null;
 }

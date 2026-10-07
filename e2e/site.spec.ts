@@ -355,8 +355,22 @@ test('the metal buttons catch the light as the pointer passes', async ({
     );
   };
   const middle = box.y + box.height / 2;
+  const lightAfterFrames = async () => {
+    await page.evaluate(
+      () =>
+        new Promise((resolve) =>
+          requestAnimationFrame(() => requestAnimationFrame(resolve)),
+        ),
+    );
+    return copy.evaluate((element) =>
+      element.style.getPropertyValue('--sheen-x'),
+    );
+  };
   await expect.poll(() => lightAt(box.x + box.width / 2, middle)).toBe('50%');
-  await expect.poll(() => lightAt(box.x + box.width + 400, middle)).toBe('0%');
+  await page.mouse.move(box.x + box.width + 400, middle);
+  expect(await lightAfterFrames()).toBe('0%');
+  await page.mouse.move(box.x + box.width / 4, box.y + box.height + 200);
+  expect(await lightAfterFrames()).toBe('0%');
 });
 
 test('each metal button catches the light once as it comes into view', async ({
@@ -408,17 +422,85 @@ test('a metal button tilts toward where it is pressed', async ({ page }) => {
     })
     .toBeGreaterThan(0.9);
   expect(await tilt()).toBe('0');
+  await page.mouse.down({ button: 'right' });
+  expect(await tilt()).toBe('0');
+  await page.mouse.up({ button: 'right' });
+  await page.mouse.down();
+  await expect(copy).toHaveCSS(
+    'background-image',
+    /, linear-gradient\(rgb\(230, 231, 234\), rgb\(244, 245, 246\)\)$/,
+  );
+  await page.mouse.up();
+});
+
+test('focused buttons keep their focus ring above their edges, hovered or not', async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto('/');
+  const banner = page.getByRole('banner');
+  const before = banner.getByRole('link', { name: 'For agents', exact: true });
+  const music = banner.getByRole('button', {
+    name: 'Background music',
+    exact: true,
+  });
+  const access = banner.getByRole('link', {
+    name: 'Request access',
+    exact: true,
+  });
+  for (const [previous, control] of [
+    [before, music],
+    [music, access],
+  ] as const) {
+    await control.hover();
+    await previous.focus();
+    await page.keyboard.press('Tab');
+    await expect(control).toBeFocused();
+    await expect(control).toHaveCSS(
+      'box-shadow',
+      /^rgb\(5, 5, 6\) 0px 0px 0px 2px, rgb\(245, 245, 242\) 0px 0px 0px 4px/,
+    );
+  }
+});
+
+test('reduced motion keeps the metal buttons still', async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto('/', { waitUntil: 'load' });
+  const copy = page.getByRole('main').locator('[data-metal]').first();
+  const box = await copy.boundingBox();
+  if (box === null) {
+    throw new Error('Copy agent prompt has no bounding box');
+  }
+  await page.mouse.move(box.x + box.width - 2, box.y + box.height / 2);
+  await page.mouse.down();
+  await page.evaluate(
+    () =>
+      new Promise((resolve) =>
+        requestAnimationFrame(() => requestAnimationFrame(resolve)),
+      ),
+  );
+  const still = await copy.evaluate((element) => ({
+    light: element.style.getPropertyValue('--sheen-x'),
+    tilt: element.style.getPropertyValue('--tilt-x'),
+    glints: element
+      .getAnimations()
+      .filter(
+        (animation) =>
+          animation.effect instanceof KeyframeEffect &&
+          animation.effect
+            .getKeyframes()
+            .some((keyframe) => '--sheen-x' in keyframe),
+      ).length,
+  }));
+  await page.mouse.up();
+  expect(still).toEqual({ light: '', tilt: '', glints: 0 });
 });
 
 declare global {
   interface Window {
-    musicCalls: {
-      kind: string;
-      at: number;
-      length: number;
-      from?: number;
-      to?: number;
-    }[];
+    musicContexts: AudioContext[];
+    musicLoops: { loop: boolean; loopStart: number; loopEnd: number }[];
   }
 }
 
@@ -443,93 +525,137 @@ const silentWav = (seconds: number) => {
   return wav;
 };
 
-const serveMusic = async (page: Page) => {
+const serveMusic = async (page: Page, statuses: number[] = []) => {
   const requests: string[] = [];
   await page.route(MUSIC_TRACK, (route) => {
     requests.push(route.request().url());
-    return route.fulfill({ contentType: 'audio/wav', body: silentWav(1) });
+    const status = statuses.shift();
+    return status === undefined
+      ? route.fulfill({ contentType: 'audio/wav', body: silentWav(10) })
+      : route.fulfill({ status });
   });
   return requests;
 };
 
-test('background music loads after the page, loops 90 seconds with a 4 second crossfade, and stays muted once muted', async ({
-  page,
-}) => {
-  await page.addInitScript(() => {
-    window.musicCalls = [];
+const blockAutoplay = (page: Page) =>
+  page.addInitScript(() => {
+    window.musicContexts = [];
+    window.musicLoops = [];
     window.AudioContext = class extends AudioContext {
+      constructor(options?: AudioContextOptions) {
+        super(options);
+        window.musicContexts.push(this);
+        void super.suspend();
+      }
+      override resume() {
+        return navigator.userActivation.isActive
+          ? super.resume()
+          : Promise.resolve();
+      }
       override createBufferSource() {
         const source = super.createBufferSource();
         const start = source.start.bind(source);
-        source.start = (when = 0, offset = 0, duration = 0) => {
-          window.musicCalls.push({
-            kind: 'start',
-            at: when,
-            length: duration,
-            from: offset,
+        source.start = (...args: Parameters<typeof start>) => {
+          window.musicLoops.push({
+            loop: source.loop,
+            loopStart: source.loopStart,
+            loopEnd: source.loopEnd,
           });
-          start(when, offset, duration);
+          start(...args);
         };
         return source;
       }
-      override createGain() {
-        const node = super.createGain();
-        const curve = node.gain.setValueCurveAtTime.bind(node.gain);
-        node.gain.setValueCurveAtTime = (values, at, length) => {
-          const levels = Array.from(values);
-          window.musicCalls.push({
-            kind: 'curve',
-            at,
-            length,
-            from: levels[0],
-            to: levels.at(-1),
-          });
-          return curve(values, at, length);
-        };
-        return node;
-      }
     };
   });
+
+const musicToggle = (page: Page) =>
+  page
+    .getByRole('banner')
+    .getByRole('button', { name: 'Background music', exact: true });
+
+const loops = (page: Page) => page.evaluate(() => window.musicLoops);
+
+const audioState = (page: Page) =>
+  page.evaluate(() => window.musicContexts.at(-1)?.state);
+
+test('background music loads after the page and loops from 4 seconds to the end once a visitor interacts', async ({
+  page,
+}) => {
+  await blockAutoplay(page);
   await page.setViewportSize({ width: 1440, height: 900 });
   const requests = await serveMusic(page);
   await page.goto('/');
-  const toggle = page
-    .getByRole('banner')
-    .getByRole('button', { name: 'Background music', exact: true });
-  await expect(toggle).toHaveAttribute('aria-pressed', 'true');
+  await expect(musicToggle(page)).toHaveAttribute('aria-pressed', 'true');
   await expect.poll(() => requests.length).toBe(1);
+  expect(
+    await page.evaluate(() => {
+      const [navigation] = performance.getEntriesByType('navigation');
+      const track = performance
+        .getEntriesByType('resource')
+        .find((entry) => entry.name.includes('ill-watch-you-burn-us'));
+      return (
+        navigation instanceof PerformanceNavigationTiming &&
+        track !== undefined &&
+        track.startTime >= navigation.loadEventEnd
+      );
+    }),
+  ).toBe(true);
+  expect(await loops(page)).toEqual([]);
+  expect(await audioState(page)).toBe('suspended');
 
   await page.getByRole('heading', { level: 1 }).click();
   await expect
-    .poll(() => page.evaluate(() => window.musicCalls.length))
-    .toBe(3);
-  const calls = await page.evaluate(() => window.musicCalls);
-  const cycle = calls.find((call) => call.kind === 'start');
-  if (cycle === undefined) {
-    throw new Error('no loop cycle started');
-  }
-  expect(cycle).toMatchObject({ from: 0, length: 90 });
-  expect(calls).toContainEqual({
-    kind: 'curve',
-    at: cycle.at,
-    length: 4,
-    from: 0,
-    to: 1,
-  });
-  expect(calls).toContainEqual(
-    expect.objectContaining({ kind: 'curve', length: 4, from: 1 }),
-  );
-  const fadeOut = calls.find(
-    (call) => call.kind === 'curve' && call.from === 1,
-  );
-  expect(fadeOut?.at).toBeCloseTo(cycle.at + 86, 6);
+    .poll(() => loops(page))
+    .toEqual([{ loop: true, loopStart: 4, loopEnd: 10 }]);
+  expect(await audioState(page)).toBe('running');
+});
 
-  await toggle.click();
-  await expect(toggle).toHaveAttribute('aria-pressed', 'false');
+test('the speaker starts blocked background music instead of muting it', async ({
+  page,
+}) => {
+  await blockAutoplay(page);
+  await page.setViewportSize({ width: 1440, height: 900 });
+  const requests = await serveMusic(page);
+  await page.goto('/');
+  await expect.poll(() => requests.length).toBe(1);
+  await musicToggle(page).click();
+  await expect(musicToggle(page)).toHaveAttribute('aria-pressed', 'true');
+  await expect.poll(() => loops(page)).toHaveLength(1);
+});
+
+test('muting background music suspends its audio and survives a reload', async ({
+  page,
+}) => {
+  await blockAutoplay(page);
+  await page.setViewportSize({ width: 1440, height: 900 });
+  const requests = await serveMusic(page);
+  await page.goto('/');
+  await page.getByRole('heading', { level: 1 }).click();
+  await expect.poll(() => loops(page)).toHaveLength(1);
+  await musicToggle(page).click();
+  await expect(musicToggle(page)).toHaveAttribute('aria-pressed', 'false');
+  await expect.poll(() => audioState(page)).toBe('suspended');
   await page.reload({ waitUntil: 'load' });
-  await expect(toggle).toHaveAttribute('aria-pressed', 'false');
+  await expect(musicToggle(page)).toHaveAttribute('aria-pressed', 'false');
   await page.waitForTimeout(1000);
   expect(requests).toHaveLength(1);
+});
+
+test('background music retries a server error and recovers from a failed load when turned back on', async ({
+  page,
+}) => {
+  await blockAutoplay(page);
+  await page.setViewportSize({ width: 1440, height: 900 });
+  const statuses = [503, 404];
+  const requests = await serveMusic(page, statuses);
+  await page.goto('/');
+  await expect(musicToggle(page)).toHaveAttribute('aria-pressed', 'false');
+  expect(requests).toHaveLength(2);
+
+  await musicToggle(page).click();
+  await expect(musicToggle(page)).toHaveAttribute('aria-pressed', 'true');
+  await expect.poll(() => requests.length).toBe(3);
+  await expect.poll(() => loops(page)).toHaveLength(1);
 });
 
 test('background music stays off where the header has no room for its control', async ({
@@ -538,9 +664,7 @@ test('background music stays off where the header has no room for its control', 
   await page.setViewportSize({ width: 390, height: 844 });
   const requests = await serveMusic(page);
   await page.goto('/', { waitUntil: 'load' });
-  await expect(
-    page.getByRole('banner').getByRole('button', { name: 'Background music' }),
-  ).toBeHidden();
+  await expect(musicToggle(page)).toBeHidden();
   await page.waitForTimeout(1000);
   expect(requests).toHaveLength(0);
 });

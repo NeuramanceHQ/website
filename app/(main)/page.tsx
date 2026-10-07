@@ -443,7 +443,7 @@ const styles = stylex.create({
     maskImage: 'linear-gradient(to right, black 70%, transparent)',
   },
   submit: {
-    borderRadius: 10,
+    borderRadius: { default: 7, '@supports (corner-shape: bevel)': 10 },
   },
   note: {
     marginTop: '1rem',
