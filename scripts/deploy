@@ -41,7 +41,7 @@ if [ ! -d "$site/releases/$sha" ]; then
     trap 'rm -rf "$build"' EXIT
     report pending "Building on i9"
     git -C "$repo" archive "$sha" | tar -x -C "$build"
-    (cd "$build" && timeout 300 bun install --frozen-lockfile && timeout 900 bun run build) \
+    (cd "$build" && timeout 300 bun install --frozen-lockfile </dev/null && timeout 900 bun run build </dev/null) \
         || fail "build failed"
     mkdir -p "$site/releases"
     mv "$build/out" "$site/releases/$sha"
