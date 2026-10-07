@@ -1,6 +1,7 @@
 import * as stylex from '@stylexjs/stylex';
 import Image from 'next/image';
 import Link from 'next/link';
+import { MusicToggle } from '@/components/music';
 import { button, frame } from '@/components/styles';
 import { REGISTERED_WORDMARK } from '@/lib/logotype';
 import { ACCESS_HREF } from '@/lib/site';
@@ -56,6 +57,7 @@ export function Nav() {
           ))}
         </nav>
         <div {...stylex.props(styles.actions)}>
+          <MusicToggle />
           <a
             href={ACCESS_HREF}
             data-metal

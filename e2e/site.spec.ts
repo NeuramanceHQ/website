@@ -410,6 +410,141 @@ test('a metal button tilts toward where it is pressed', async ({ page }) => {
   expect(await tilt()).toBe('0');
 });
 
+declare global {
+  interface Window {
+    musicCalls: {
+      kind: string;
+      at: number;
+      length: number;
+      from?: number;
+      to?: number;
+    }[];
+  }
+}
+
+const MUSIC_TRACK = '**/audio/ill-watch-you-burn-us.*.m4a';
+
+const silentWav = (seconds: number) => {
+  const rate = 8000;
+  const bytes = rate * seconds * 2;
+  const wav = Buffer.alloc(44 + bytes);
+  wav.write('RIFF', 0);
+  wav.writeUInt32LE(36 + bytes, 4);
+  wav.write('WAVEfmt ', 8);
+  wav.writeUInt32LE(16, 16);
+  wav.writeUInt16LE(1, 20);
+  wav.writeUInt16LE(1, 22);
+  wav.writeUInt32LE(rate, 24);
+  wav.writeUInt32LE(rate * 2, 28);
+  wav.writeUInt16LE(2, 32);
+  wav.writeUInt16LE(16, 34);
+  wav.write('data', 36);
+  wav.writeUInt32LE(bytes, 40);
+  return wav;
+};
+
+const serveMusic = async (page: Page) => {
+  const requests: string[] = [];
+  await page.route(MUSIC_TRACK, (route) => {
+    requests.push(route.request().url());
+    return route.fulfill({ contentType: 'audio/wav', body: silentWav(1) });
+  });
+  return requests;
+};
+
+test('background music loads after the page, loops 90 seconds with a 4 second crossfade, and stays muted once muted', async ({
+  page,
+}) => {
+  await page.addInitScript(() => {
+    window.musicCalls = [];
+    window.AudioContext = class extends AudioContext {
+      override createBufferSource() {
+        const source = super.createBufferSource();
+        const start = source.start.bind(source);
+        source.start = (when = 0, offset = 0, duration = 0) => {
+          window.musicCalls.push({
+            kind: 'start',
+            at: when,
+            length: duration,
+            from: offset,
+          });
+          start(when, offset, duration);
+        };
+        return source;
+      }
+      override createGain() {
+        const node = super.createGain();
+        const curve = node.gain.setValueCurveAtTime.bind(node.gain);
+        node.gain.setValueCurveAtTime = (values, at, length) => {
+          const levels = Array.from(values);
+          window.musicCalls.push({
+            kind: 'curve',
+            at,
+            length,
+            from: levels[0],
+            to: levels.at(-1),
+          });
+          return curve(values, at, length);
+        };
+        return node;
+      }
+    };
+  });
+  await page.setViewportSize({ width: 1440, height: 900 });
+  const requests = await serveMusic(page);
+  await page.goto('/');
+  const toggle = page
+    .getByRole('banner')
+    .getByRole('button', { name: 'Background music', exact: true });
+  await expect(toggle).toHaveAttribute('aria-pressed', 'true');
+  await expect.poll(() => requests.length).toBe(1);
+
+  await page.getByRole('heading', { level: 1 }).click();
+  await expect
+    .poll(() => page.evaluate(() => window.musicCalls.length))
+    .toBe(3);
+  const calls = await page.evaluate(() => window.musicCalls);
+  const cycle = calls.find((call) => call.kind === 'start');
+  if (cycle === undefined) {
+    throw new Error('no loop cycle started');
+  }
+  expect(cycle).toMatchObject({ from: 0, length: 90 });
+  expect(calls).toContainEqual({
+    kind: 'curve',
+    at: cycle.at,
+    length: 4,
+    from: 0,
+    to: 1,
+  });
+  expect(calls).toContainEqual(
+    expect.objectContaining({ kind: 'curve', length: 4, from: 1 }),
+  );
+  const fadeOut = calls.find(
+    (call) => call.kind === 'curve' && call.from === 1,
+  );
+  expect(fadeOut?.at).toBeCloseTo(cycle.at + 86, 6);
+
+  await toggle.click();
+  await expect(toggle).toHaveAttribute('aria-pressed', 'false');
+  await page.reload({ waitUntil: 'load' });
+  await expect(toggle).toHaveAttribute('aria-pressed', 'false');
+  await page.waitForTimeout(1000);
+  expect(requests).toHaveLength(1);
+});
+
+test('background music stays off where the header has no room for its control', async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  const requests = await serveMusic(page);
+  await page.goto('/', { waitUntil: 'load' });
+  await expect(
+    page.getByRole('banner').getByRole('button', { name: 'Background music' }),
+  ).toBeHidden();
+  await page.waitForTimeout(1000);
+  expect(requests).toHaveLength(0);
+});
+
 test('Copy agent prompt copies the exact prompt and resets within 4 seconds', async ({
   context,
   page,

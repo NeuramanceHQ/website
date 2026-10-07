@@ -33,9 +33,9 @@ Done means `lint`, `format:check`, `typecheck`, `test`, `test:e2e`, and `build` 
 - `app/layout.tsx`: metadata, fonts (`next/font/local` from `lib/fonts`), JSON-LD, body styles
 - `app/globals.css`: reset inside `@layer resets`, then the `@stylex;` directive where StyleX emits its CSS
 - `app/(main)/`: pages sharing the announcement bar, sticky header, and footer (`/`, `/waitlist`, `/error`); `error.tsx` renders the `/error` page as the error boundary
-- `components/`: `announcement` (dismissible top bar), `nav` (sticky header), `footer`, `marquee` (endless, pausable ticker), `video-background` (YouTube background fixed behind every page), `copy-button`, `sound-button` (all audio: one shared `Audio` element), `styles.ts` (shared StyleX styles: page frame, buttons, labels, panels)
+- `components/`: `announcement` (dismissible top bar), `nav` (sticky header), `footer`, `marquee` (endless, pausable ticker), `video-background` (YouTube background fixed behind every page), `copy-button`, `sound-button` (one shared `Audio` element for the audio quote), `music` (header toggle for the looping background track: Web Audio, 90-second equal-power crossfade loop, autoplays where the browser allows it and otherwise on the first interaction, remembers a mute), `styles.ts` (shared StyleX styles: page frame, buttons, labels, panels)
 - `lib/tokens.stylex.ts`: design constants (`defineConsts`) for colors and fonts
-- `lib/logotype.ts`: the NEURAMANCE wordmark (Chakra Petch Bold outlines with ®) shared by the nav and footer; `lib/site.ts`: the access email, agent prompt, and video ID
+- `lib/logotype.ts`: the NEURAMANCE wordmark (Chakra Petch Bold outlines with ®) shared by the nav and footer; `lib/site.ts`: the access email, agent prompt, video ID, and music track; the licensed track is served from i9's `/srv/media` at `media.neuramance.com` with a content-hashed name, never committed to this public repo
 
 ## Styling
 
