@@ -14,11 +14,12 @@
 	header @hashed Cache-Control "public, max-age=31536000, immutable"
 	@unhashed not path /_next/static/*
 	header @unhashed Cache-Control "public, max-age=0, must-revalidate"
-	@trailingSlash path_regexp trailingSlash ^(.+)/$
+	@trailingSlash path_regexp trailingSlash ^((?:/[\w.~-]+)+)/$
 	redir @trailingSlash {re.trailingSlash.1}{?query} 308
 	try_files {path} {path}.html
 	file_server
 	handle_errors 404 {
+		header Cache-Control "public, max-age=0, must-revalidate"
 		rewrite * /404.html
 		file_server
 	}

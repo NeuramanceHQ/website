@@ -860,6 +860,7 @@ test('the server sends security headers and caches only hashed assets for good',
   for (const [path, cache] of [
     ['/', 'public, max-age=0, must-revalidate'],
     ['/about', 'public, max-age=0, must-revalidate'],
+    ['/_next/static/chunks/missing.js', 'public, max-age=0, must-revalidate'],
     [new URL(asset).pathname, 'public, max-age=31536000, immutable'],
   ] as const) {
     const response = await request.get(path);
@@ -885,6 +886,17 @@ test('trailing slashes and the www host redirect to the canonical URL', async ({
   expect(www.headers()['location']).toBe(
     'https://neuramance.com/waitlist?ref=x',
   );
+
+  const { origin } = new URL(slash.url());
+  for (const path of [
+    '/%5Cexample.org/',
+    '/%09/example.org/',
+    '//example.org/',
+  ]) {
+    const response = await request.get(origin + path, { maxRedirects: 0 });
+    const location = response.headers()['location'] ?? '/';
+    expect(new URL(location, origin).origin).toBe(origin);
+  }
 });
 
 test('/about returns status 404', async ({ page }) => {
