@@ -12,6 +12,7 @@ const GLINT: KeyframeAnimationOptions = {
 };
 
 const glinted = new WeakSet<Element>();
+const lit = new WeakSet<Element>();
 
 export function MetalLight() {
   const pathname = usePathname();
@@ -19,7 +20,6 @@ export function MetalLight() {
     if (matchMedia('(prefers-reduced-motion: reduce)').matches) {
       return;
     }
-    const lit = new WeakSet<Element>();
     let pointer: { x: number; y: number } | undefined;
     let frame = 0;
     const light = () => {

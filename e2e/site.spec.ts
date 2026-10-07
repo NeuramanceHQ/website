@@ -401,6 +401,41 @@ test('each metal button catches the light once as it comes into view', async ({
   await expect.poll(() => glints(closing)).toBe(1);
 });
 
+test('a header key lit before a client-side navigation parks once the pointer leaves', async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto('/waitlist');
+  const banner = page.getByRole('banner');
+  const access = banner.getByRole('link', {
+    name: 'Request access',
+    exact: true,
+  });
+  const box = await access.boundingBox();
+  if (box === null) {
+    throw new Error('Request access has no bounding box');
+  }
+  const light = () =>
+    access.evaluate((element) => element.style.getPropertyValue('--sheen-x'));
+  await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+  await expect.poll(light).toBe('50%');
+
+  await banner.getByRole('link', { name: 'Neuramance home' }).focus();
+  await page.keyboard.press('Enter');
+  await expect(page).toHaveURL('/');
+  await expect(
+    page.getByRole('main').getByRole('button', { name: 'Copy agent prompt' }),
+  ).toHaveCount(3);
+  await page.evaluate(
+    () =>
+      new Promise((resolve) =>
+        requestAnimationFrame(() => requestAnimationFrame(resolve)),
+      ),
+  );
+  await page.mouse.move(box.x - 600, box.y + 400);
+  await expect.poll(light).toBe('100%');
+});
+
 test('a metal button tilts toward where it is pressed', async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.goto('/');
@@ -501,6 +536,7 @@ declare global {
   interface Window {
     musicContexts: AudioContext[];
     musicLoops: { loop: boolean; loopStart: number; loopEnd: number }[];
+    interruptMusic: () => Promise<void>;
   }
 }
 
@@ -539,8 +575,22 @@ const serveMusic = async (page: Page, statuses: number[] = []) => {
 
 const blockAutoplay = (page: Page) =>
   page.addInitScript(() => {
+    let gestured = false;
+    for (const type of ['pointerdown', 'keydown']) {
+      addEventListener(
+        type,
+        (event) => {
+          gestured ||= event.isTrusted;
+        },
+        { capture: true },
+      );
+    }
     window.musicContexts = [];
     window.musicLoops = [];
+    window.interruptMusic = async () => {
+      gestured = false;
+      await window.musicContexts.at(-1)?.suspend();
+    };
     window.AudioContext = class extends AudioContext {
       constructor(options?: AudioContextOptions) {
         super(options);
@@ -548,9 +598,7 @@ const blockAutoplay = (page: Page) =>
         void super.suspend();
       }
       override resume() {
-        return navigator.userActivation.isActive
-          ? super.resume()
-          : Promise.resolve();
+        return gestured ? super.resume() : Promise.resolve();
       }
       override createBufferSource() {
         const source = super.createBufferSource();
@@ -596,7 +644,7 @@ test('background music loads after the page and loops from 4 seconds to the end 
       return (
         navigation instanceof PerformanceNavigationTiming &&
         track !== undefined &&
-        track.startTime >= navigation.loadEventEnd
+        track.startTime >= navigation.loadEventStart
       );
     }),
   ).toBe(true);
@@ -621,6 +669,24 @@ test('the speaker starts blocked background music instead of muting it', async (
   await musicToggle(page).click();
   await expect(musicToggle(page)).toHaveAttribute('aria-pressed', 'true');
   await expect.poll(() => loops(page)).toHaveLength(1);
+});
+
+test('a tap anywhere resumes background music the browser interrupted', async ({
+  page,
+}) => {
+  await blockAutoplay(page);
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await serveMusic(page);
+  await page.goto('/');
+  const heading = page.getByRole('heading', { level: 1 });
+  await heading.click();
+  await expect.poll(() => audioState(page)).toBe('running');
+  await page.evaluate(() => window.interruptMusic());
+  await expect.poll(() => audioState(page)).toBe('suspended');
+
+  await heading.click();
+  await expect.poll(() => audioState(page)).toBe('running');
+  await expect(musicToggle(page)).toHaveAttribute('aria-pressed', 'true');
 });
 
 test('muting background music suspends its audio and survives a reload', async ({

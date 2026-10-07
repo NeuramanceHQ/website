@@ -137,14 +137,7 @@ function ensureEngine() {
   for (const type of UNLOCK_EVENTS) {
     addEventListener(type, unlock, { capture: true, passive: true });
   }
-  context.addEventListener('statechange', () => {
-    if (context.state === 'running') {
-      for (const type of UNLOCK_EVENTS) {
-        removeEventListener(type, unlock, { capture: true });
-      }
-    }
-    void sync();
-  });
+  context.addEventListener('statechange', () => void sync());
   engine = { context, master, suspendTimer: 0 };
   return engine;
 }
