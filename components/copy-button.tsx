@@ -62,50 +62,49 @@ export function CopyButton({
     reset.current = setTimeout(() => setStatus(undefined), RESET_MS);
   };
   return (
-    <button
-      {...props}
-      ref={self}
-      type="button"
-      aria-live="polite"
-      onClick={copy}
-    >
-      <span {...stylex.props(styles.stack)}>
-        <span {...stylex.props(styles.face, status && styles.hidden)}>
-          {children}
+    <>
+      <button {...props} ref={self} type="button" onClick={copy}>
+        <span {...stylex.props(styles.stack)}>
+          <span {...stylex.props(styles.face, status && styles.hidden)}>
+            {children}
+          </span>
+          {status && (
+            <span key={status} {...stylex.props(styles.face, styles.status)}>
+              {status === 'copied' && (
+                <Check
+                  aria-hidden
+                  {...stylex.props(
+                    button.icon,
+                    'data-metal' in props && button.etched,
+                    styles.check,
+                  )}
+                />
+              )}
+              {LABELS[status]}
+            </span>
+          )}
         </span>
-        {status && (
-          <span key={status} {...stylex.props(styles.face, styles.status)}>
-            {status === 'copied' && (
-              <Check
-                aria-hidden
-                {...stylex.props(
-                  button.icon,
-                  'data-metal' in props && button.etched,
-                  styles.check,
-                )}
+        {status === 'copied' && outline && (
+          <svg aria-hidden {...stylex.props(styles.trace)}>
+            {outline.bevel ? (
+              <polygon points={chamfer(outline)} pathLength={1} />
+            ) : (
+              <rect
+                x={-TRACE_GAP}
+                y={-TRACE_GAP}
+                width={outline.width + 2 * TRACE_GAP}
+                height={outline.height + 2 * TRACE_GAP}
+                rx={outline.corner + TRACE_GAP}
+                pathLength={1}
               />
             )}
-            {LABELS[status]}
-          </span>
+          </svg>
         )}
-      </span>
-      {status === 'copied' && outline && (
-        <svg aria-hidden {...stylex.props(styles.trace)}>
-          {outline.bevel ? (
-            <polygon points={chamfer(outline)} pathLength={1} />
-          ) : (
-            <rect
-              x={-TRACE_GAP}
-              y={-TRACE_GAP}
-              width={outline.width + 2 * TRACE_GAP}
-              height={outline.height + 2 * TRACE_GAP}
-              rx={outline.corner + TRACE_GAP}
-              pathLength={1}
-            />
-          )}
-        </svg>
-      )}
-    </button>
+      </button>
+      <output aria-live="polite" {...stylex.props(styles.announcer)}>
+        {status && LABELS[status]}
+      </output>
+    </>
   );
 }
 
@@ -128,6 +127,14 @@ const cut = stylex.keyframes({
 const MOTION = '@media (prefers-reduced-motion: no-preference)';
 
 const styles = stylex.create({
+  announcer: {
+    position: 'absolute',
+    width: 1,
+    height: 1,
+    overflow: 'hidden',
+    clipPath: 'inset(50%)',
+    whiteSpace: 'nowrap',
+  },
   stack: {
     display: 'inline-grid',
   },
