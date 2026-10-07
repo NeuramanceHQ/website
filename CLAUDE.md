@@ -42,6 +42,7 @@ Done means `lint`, `format:check`, `typecheck`, `test`, `test:e2e`, and `build` 
 
 - `Caddyfile`: the site's serving rules (clean URLs, the 404 page, security headers, caching, trailing-slash and `www` redirects). Production imports it as `/etc/caddy/neuramance.caddy`; after changing it, run `sudo install -m 644 Caddyfile /etc/caddy/neuramance.caddy && sudo systemctl reload caddy`. `Caddyfile.local` wraps it for `bun run start`.
 - Deploys: the `neuramance-deploy` systemd user timer runs `scripts/deploy` every minute. It builds `origin/main` into `/srv/neuramance/releases/<sha>`, switches the `/srv/neuramance/current` symlink, keeps five releases, and reports a `deploy/i9` commit status on GitHub. It skips a commit recorded in `/srv/neuramance/failed`, and refuses to deploy while `Caddyfile` differs from the installed copy. Logs: `journalctl --user -u neuramance-deploy`. Roll back by reverting on `main`.
+- Cloudflare: when `CLOUDFLARE_API_TOKEN` is set, it is a scoped token for the owner's Cloudflare zones and tunnels; never print or commit it. Take the account ID from the API's `/zones`. A `PUT` to a ruleset phase entrypoint replaces every rule in that phase: read the entrypoint first and send back the full list.
 
 ## Styling
 
