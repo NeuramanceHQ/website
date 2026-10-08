@@ -1,5 +1,5 @@
-import { expect, it } from 'vitest';
-import { bakeCrossfade } from './music';
+import { afterEach, expect, it, vi } from 'vitest';
+import { bakeCrossfade, fetchTrack } from './music';
 
 const FADE = 8;
 const LENGTH = 32;
@@ -50,3 +50,90 @@ it('leaves everything outside the tail untouched', () => {
     expect(samples[index]).toBe(index);
   }
 });
+
+afterEach(() => {
+  vi.useRealTimers();
+  vi.unstubAllGlobals();
+  vi.restoreAllMocks();
+});
+
+const BROWSER_ABORTS = {
+  reason: (signal: AbortSignal): unknown => signal.reason,
+  firefox: (): unknown =>
+    new DOMException('The operation was aborted.', 'AbortError'),
+  chromium: (): unknown => new TypeError('Failed to fetch'),
+};
+
+function trickle(
+  bytes: number,
+  gapMs: number,
+  signal: AbortSignal | null | undefined,
+  aborted: (signal: AbortSignal) => unknown = BROWSER_ABORTS.reason,
+) {
+  if (!signal) {
+    throw new Error('fetchTrack must pass an abort signal to fetch');
+  }
+  let sent = 0;
+  return new ReadableStream<Uint8Array>({
+    start(stream) {
+      signal.addEventListener('abort', () => stream.error(aborted(signal)));
+    },
+    pull(stream) {
+      if (sent === bytes) {
+        stream.close();
+        return undefined;
+      }
+      return new Promise<void>((resolve) => {
+        setTimeout(() => {
+          if (signal.aborted) {
+            resolve();
+            return;
+          }
+          stream.enqueue(new Uint8Array([sent]));
+          sent += 1;
+          resolve();
+        }, gapMs);
+      });
+    },
+  });
+}
+
+it('keeps downloading a slow track for as long as data keeps arriving', async () => {
+  vi.useFakeTimers();
+  vi.spyOn(AbortSignal, 'timeout').mockImplementation((milliseconds) => {
+    const timeout = new AbortController();
+    setTimeout(
+      () => timeout.abort(new DOMException('Timed out', 'TimeoutError')),
+      milliseconds,
+    );
+    return timeout.signal;
+  });
+  const fetch = vi.fn(
+    (_url: string, init: RequestInit) =>
+      new Response(trickle(9, 10_000, init.signal)),
+  );
+  vi.stubGlobal('fetch', fetch);
+  const track = fetchTrack();
+  await vi.advanceTimersByTimeAsync(90_000);
+  expect([...new Uint8Array(await track)]).toEqual([0, 1, 2, 3, 4, 5, 6, 7, 8]);
+  expect(fetch).toHaveBeenCalledTimes(1);
+});
+
+it.each(Object.entries(BROWSER_ABORTS))(
+  'abandons a download that stops delivering data, retrying twice, when the browser reports the abort as %s',
+  async (_browser, aborted) => {
+    vi.useFakeTimers();
+    const fetch = vi.fn(
+      (_url: string, init: RequestInit) =>
+        new Response(trickle(9, 20_000, init.signal, aborted)),
+    );
+    vi.stubGlobal('fetch', fetch);
+    const failure = fetchTrack().catch((error: unknown) => error);
+    await vi.advanceTimersByTimeAsync(15_000 + 1_000 + 15_000 + 2_000 + 14_999);
+    expect(fetch).toHaveBeenCalledTimes(3);
+    await vi.advanceTimersByTimeAsync(1);
+    const error = await failure;
+    expect(error).toBeInstanceOf(DOMException);
+    expect(error instanceof DOMException && error.name).toBe('TimeoutError');
+  },
+);

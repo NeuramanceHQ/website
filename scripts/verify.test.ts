@@ -234,7 +234,14 @@ echo "$1 end" >> calls
 `;
 
 function fakeRepository(root: string, behavior: string): string {
-  const scripts = ['typecheck', 'lint', 'format:check', 'test', 'build'];
+  const scripts = [
+    'typecheck',
+    'lint',
+    'lint:shell',
+    'format:check',
+    'test',
+    'build',
+  ];
   writeFileSync(
     join(root, 'package.json'),
     JSON.stringify({
@@ -292,10 +299,10 @@ it.concurrent('runs every check in order at the end of a turn', async ({
   const result = await gate(root);
   expect([result.status, result.stderr]).toEqual([0, '']);
   expect(result.stdout).toMatch(
-    /^agent-verify: suppressions, typecheck, lint, format:check, test, build passed in \d+\.\ds\n$/,
+    /^agent-verify: suppressions, typecheck, lint, lint:shell, format:check, test, build passed in \d+\.\ds\n$/,
   );
   expect(calls(root)).toEqual(
-    ran('typecheck', 'lint', 'format:check', 'test', 'build'),
+    ran('typecheck', 'lint', 'lint:shell', 'format:check', 'test', 'build'),
   );
 });
 
@@ -307,9 +314,11 @@ it.concurrent('skips the tests and the build after an edit', async ({
   const result = await gate(root, [join(root, 'app/page.tsx')]);
   expect([result.status, result.stderr]).toEqual([0, '']);
   expect(result.stdout).toMatch(
-    /^agent-verify: suppressions, typecheck, lint, format:check passed in /,
+    /^agent-verify: suppressions, typecheck, lint, lint:shell, format:check passed in /,
   );
-  expect(calls(root)).toEqual(ran('typecheck', 'lint', 'format:check'));
+  expect(calls(root)).toEqual(
+    ran('typecheck', 'lint', 'lint:shell', 'format:check'),
+  );
 });
 
 it.concurrent('reports a failing check after running the others', async ({
@@ -326,7 +335,7 @@ it.concurrent('reports a failing check after running the others', async ({
   expect(calls(root)).toEqual([
     ...ran('typecheck'),
     'lint start',
-    ...ran('format:check', 'test', 'build'),
+    ...ran('lint:shell', 'format:check', 'test', 'build'),
   ]);
 });
 
@@ -388,7 +397,7 @@ it.concurrent('reports the checks it had no time to run instead of starting them
     /^FAIL \[typecheck\] bun run --silent typecheck timed out\n/,
   );
   expect(report.stderr).toMatch(
-    /\nFAIL \[deadline\] no time left to run lint, format:check, test, build\n$/,
+    /\nFAIL \[deadline\] no time left to run lint, lint:shell, format:check, test, build\n$/,
   );
   expect(calls(root)).toEqual(['typecheck start', 'typecheck stopped']);
 });
@@ -424,8 +433,8 @@ it.concurrent('waits for a verification already running in the same checkout', a
   expect([patient.exitCode, patient.stderr]).toEqual([0, '']);
   expect(await exited).toBe(0);
   const sequence = calls(root);
-  expect(sequence).toHaveLength(20);
-  expect(sequence.slice(0, 10)).toEqual(sequence.slice(10));
+  expect(sequence).toHaveLength(24);
+  expect(sequence.slice(0, 12)).toEqual(sequence.slice(12));
 }, 20_000);
 
 it.concurrent('asks its running check to stop when interrupted', async ({

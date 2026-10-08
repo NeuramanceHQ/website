@@ -111,6 +111,43 @@ test('trailing slashes and the www host redirect to the canonical URL', async ({
   }
 });
 
+test('robots.txt allows crawling and names the sitemap, which lists the home page', async ({
+  request,
+}) => {
+  const robots = await request.get('/robots.txt');
+  expect(robots.status()).toBe(200);
+  expect(await robots.text()).toBe(
+    'User-agent: *\nAllow: /\n\nSitemap: https://neuramance.com/sitemap.xml\n',
+  );
+  const sitemap = await request.get('/sitemap.xml');
+  expect(sitemap.status()).toBe(200);
+  expect(sitemap.headers()['content-type']).toMatch(/xml/);
+  expect(
+    [...(await sitemap.text()).matchAll(/<loc>([^<]+)<\/loc>/g)].map(
+      ([, location]) => location,
+    ),
+  ).toEqual(['https://neuramance.com/']);
+});
+
+test('the structured data logo is a square image of at least 112 pixels', async ({
+  page,
+  request,
+}) => {
+  await page.goto('/');
+  const { logo } = await page
+    .locator('script[type="application/ld+json"]')
+    .evaluate((script) => JSON.parse(script.innerHTML) as { logo: string });
+  expect(logo).toBe('https://neuramance.com/logo.svg');
+  const response = await request.get(new URL(logo).pathname);
+  expect(response.headers()['content-type']).toMatch(/^image\/svg\+xml/);
+  await page.setContent(await response.text());
+  const size = await page
+    .locator('svg')
+    .evaluate((svg) => svg.getBoundingClientRect().toJSON());
+  expect(size.width).toBe(size.height);
+  expect(size.width).toBeGreaterThanOrEqual(112);
+});
+
 test('/about returns status 404 with the branded not-found page', async ({
   page,
 }) => {

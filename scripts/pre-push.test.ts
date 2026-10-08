@@ -14,9 +14,16 @@ import { join, resolve } from 'node:path';
 import { afterEach, beforeEach, expect, it } from 'vitest';
 
 const ZERO_SHA = '0'.repeat(40);
-const SCRIPTS = ['typecheck', 'lint', 'format:check', 'test', 'test:e2e'];
+const SCRIPTS = [
+  'typecheck',
+  'lint',
+  'lint:shell',
+  'format:check',
+  'test',
+  'test:e2e',
+];
 const PASSED =
-  /^agent-verify: suppressions, typecheck, lint, format:check, test, test:e2e passed in \d+\.\ds\n$/;
+  /^agent-verify: suppressions, typecheck, lint, lint:shell, format:check, test, test:e2e passed in \d+\.\ds\n$/;
 let repository = '';
 
 function git(...args: string[]): string {

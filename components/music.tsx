@@ -9,7 +9,7 @@ import { MUSIC } from '@/lib/site';
 const CROSSFADE_SECONDS = 4;
 const RAMP_SECONDS = 0.8;
 const VOLUME = 0.6;
-const LOAD_TIMEOUT_MS = 60_000;
+const STALL_TIMEOUT_MS = 15_000;
 const LOAD_ATTEMPTS = 3;
 const RETRY_DELAY_MS = 1000;
 const STORAGE_KEY = 'music';
@@ -78,25 +78,61 @@ function resumable({ state }: AudioContext) {
   return state !== 'running' && state !== 'closed';
 }
 
+class HttpError extends Error {
+  constructor(readonly status: number) {
+    super(`${MUSIC.src}: HTTP ${status}`);
+  }
+}
+
 function transient(error: unknown) {
   return (
     error instanceof TypeError ||
-    (error instanceof DOMException && error.name === 'TimeoutError')
+    (error instanceof DOMException && error.name === 'TimeoutError') ||
+    (error instanceof HttpError &&
+      (error.status === 429 || error.status >= 500))
   );
 }
 
-async function fetchTrack() {
+async function download() {
+  const controller = new AbortController();
+  let stall: ReturnType<typeof setTimeout> | undefined;
+  const watch = () => {
+    clearTimeout(stall);
+    stall = setTimeout(
+      () =>
+        controller.abort(
+          new DOMException(`${MUSIC.src} stalled`, 'TimeoutError'),
+        ),
+      STALL_TIMEOUT_MS,
+    );
+  };
+  watch();
+  try {
+    const response = await fetch(MUSIC.src, {
+      priority: 'low',
+      signal: controller.signal,
+    });
+    if (!response.ok) throw new HttpError(response.status);
+    const watched = response.body?.pipeThrough(
+      new TransformStream({
+        transform(chunk, stream) {
+          watch();
+          stream.enqueue(chunk);
+        },
+      }),
+    );
+    return await new Response(watched).arrayBuffer();
+  } catch (error) {
+    throw controller.signal.aborted ? controller.signal.reason : error;
+  } finally {
+    clearTimeout(stall);
+  }
+}
+
+export async function fetchTrack() {
   for (let attempt = 1; ; attempt++) {
     try {
-      const response = await fetch(MUSIC.src, {
-        priority: 'low',
-        signal: AbortSignal.timeout(LOAD_TIMEOUT_MS),
-      });
-      if (response.ok) return await response.arrayBuffer();
-      const retryable = response.status === 429 || response.status >= 500;
-      if (!retryable || attempt === LOAD_ATTEMPTS) {
-        throw new Error(`${MUSIC.src}: HTTP ${response.status}`);
-      }
+      return await download();
     } catch (error) {
       if (!transient(error) || attempt === LOAD_ATTEMPTS) throw error;
     }
@@ -194,8 +230,8 @@ async function sync() {
 }
 
 function toggle() {
-  if (getWanted() && engine && resumable(engine.context) && audible()) {
-    void engine.context.resume();
+  if (getWanted() && audible() && engine?.context.state !== 'running') {
+    void sync();
     return;
   }
   const on = !getWanted();

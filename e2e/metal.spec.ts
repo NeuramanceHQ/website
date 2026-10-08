@@ -162,7 +162,9 @@ test('a press held on the very edge of a metal key still activates it', async ({
     throw new Error('Copy agent prompt has no bounding box');
   }
   await page.mouse.click(box.x + box.width / 2, box.y + 1, { delay: 200 });
-  await expect(copy).toHaveAccessibleName('Copied');
+  await expect(copy.locator('xpath=following-sibling::output[1]')).toHaveText(
+    'Copied',
+  );
 });
 
 test('focused buttons keep their focus ring above their edges while hovered', async ({

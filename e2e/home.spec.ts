@@ -247,6 +247,27 @@ test('Announcement links to the agent guide and can be dismissed', async ({
   await expect(announcement).toHaveCount(0);
 });
 
+test('dismissing the announcement from the keyboard hands focus to the header', async ({
+  page,
+}) => {
+  await page.goto('/');
+  const announcement = page.getByRole('complementary', {
+    name: 'Announcement',
+  });
+  await expect(async () => {
+    await announcement
+      .getByRole('button', { name: 'Dismiss announcement', exact: true })
+      .focus();
+    await page.keyboard.press('Enter');
+    await expect(announcement).toHaveCount(0, { timeout: 500 });
+  }).toPass();
+  await expect(
+    page
+      .getByRole('banner')
+      .getByRole('link', { name: 'Neuramance home', exact: true }),
+  ).toBeFocused();
+});
+
 test('Copy agent prompt copies the exact prompt and resets within 4 seconds', async ({
   context,
   page,
@@ -254,17 +275,23 @@ test('Copy agent prompt copies the exact prompt and resets within 4 seconds', as
   await context.grantPermissions(['clipboard-read', 'clipboard-write']);
   await page.goto('/');
   const copy = page.getByRole('main').locator('[data-metal]').first();
+  const label = copy.getByText('Copy agent prompt', { exact: true });
+  const outcome = copy.getByText('Copied', { exact: true });
+  const announcer = copy.locator('xpath=following-sibling::output[1]');
   await expect(copy).toHaveAccessibleName('Copy agent prompt');
   const before = await copy.boundingBox();
   await copy.click();
-  await expect(copy).toHaveAccessibleName('Copied');
+  await expect(outcome).toBeVisible();
+  await expect(label).toHaveCSS('opacity', '0');
+  await expect(announcer).toHaveText('Copied');
+  await expect(copy).toHaveAccessibleName('Copy agent prompt');
   expect((await copy.boundingBox())?.width).toBe(before?.width);
   expect(await page.evaluate(() => navigator.clipboard.readText())).toBe(
     PROMPT,
   );
-  await expect(copy).toHaveAccessibleName('Copy agent prompt', {
-    timeout: 4000,
-  });
+  await expect(outcome).toHaveCount(0, { timeout: 4000 });
+  await expect(label).toHaveCSS('opacity', '1');
+  await expect(announcer).toHaveText('');
 });
 
 test('Copy agent prompt shows Copy failed when the clipboard write fails', async ({
@@ -275,14 +302,13 @@ test('Copy agent prompt shows Copy failed when the clipboard write fails', async
       Promise.reject(new Error('Clipboard write failed'));
   });
   await page.goto('/');
-  await page
-    .getByRole('main')
-    .getByRole('button', { name: 'Copy agent prompt', exact: true })
-    .first()
-    .click();
-  await expect(
-    page.getByRole('button', { name: 'Copy failed', exact: true }),
-  ).toBeVisible();
+  const copy = page.getByRole('main').locator('[data-metal]').first();
+  await copy.click();
+  await expect(copy.getByText('Copy failed', { exact: true })).toBeVisible();
+  await expect(copy.locator('xpath=following-sibling::output[1]')).toHaveText(
+    'Copy failed',
+  );
+  await expect(copy).toHaveAccessibleName('Copy agent prompt');
 });
 
 test('home page publishes Neuramance metadata', async ({ page }) => {

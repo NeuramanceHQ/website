@@ -176,6 +176,38 @@ test('the speaker starts blocked background music instead of muting it', async (
   await expect.poll(() => loops(page)).toHaveLength(1);
 });
 
+test('the speaker starts background music pressed before the page finishes loading', async ({
+  page,
+}) => {
+  await blockAutoplay(page);
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await serveMusic(page);
+  let release = () => {};
+  const held = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+  await page.route('**/held-image.png', async (route) => {
+    await held;
+    await route.fulfill({ status: 404 });
+  });
+  await page.addInitScript(() => {
+    document.addEventListener('DOMContentLoaded', () => {
+      const image = document.createElement('img');
+      image.hidden = true;
+      image.src = '/held-image.png';
+      document.body.append(image);
+    });
+  });
+  await page.goto('/', { waitUntil: 'domcontentloaded' });
+  await untilHydrated(page);
+  expect(await page.evaluate(() => document.readyState)).not.toBe('complete');
+
+  await musicToggle(page).click();
+  await expect(musicToggle(page)).toHaveAttribute('aria-pressed', 'true');
+  await expect.poll(() => loops(page)).toHaveLength(1);
+  release();
+});
+
 test('a tap anywhere resumes background music the browser interrupted', async ({
   page,
 }) => {

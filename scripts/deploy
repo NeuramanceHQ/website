@@ -31,9 +31,9 @@ fi
 if ! git -C "$repo" show "$sha:Caddyfile" | cmp -s - /etc/caddy/neuramance.caddy; then
     echo "$sha: Caddyfile differs from /etc/caddy/neuramance.caddy; install it with sudo" >&2
     [ "$(cat "$site/waiting" 2>/dev/null || true)" = "$sha" ] \
-        || report failure "Waiting for the new Caddyfile to be installed with sudo"
+        || report pending "Waiting for the new Caddyfile to be installed with sudo"
     echo "$sha" > "$site/waiting"
-    exit 1
+    exit 0
 fi
 
 if [ ! -d "$site/releases/$sha" ]; then
@@ -51,4 +51,5 @@ ln -sfn "releases/$sha" "$site/current.next"
 mv -T "$site/current.next" "$site/current"
 report success "Live on neuramance.com"
 echo "$sha is live"
-ls -1t "$site/releases" | tail -n +6 | while read -r old; do rm -rf "${site:?}/releases/$old"; done
+find "$site/releases" -mindepth 1 -maxdepth 1 -printf '%T@ %f\n' | sort -rn | tail -n +6 \
+    | while read -r _ old; do rm -rf "${site:?}/releases/$old"; done

@@ -46,6 +46,7 @@ export function CopyButton({
   ...props
 }: { text: string } & Omit<ComponentProps<'button'>, 'onClick' | 'type'>) {
   const [status, setStatus] = useState<keyof typeof LABELS>();
+  const [copies, setCopies] = useState(0);
   const [outline, setOutline] = useState<Outline>();
   const self = useRef<HTMLButtonElement>(null);
   const reset = useRef<ReturnType<typeof setTimeout>>(undefined);
@@ -58,6 +59,7 @@ export function CopyButton({
       setStatus('failed');
       reportError(error);
     }
+    setCopies((count) => count + 1);
     clearTimeout(reset.current);
     reset.current = setTimeout(() => setStatus(undefined), RESET_MS);
   };
@@ -69,7 +71,11 @@ export function CopyButton({
             {children}
           </span>
           {status && (
-            <span key={status} {...stylex.props(styles.face, styles.status)}>
+            <span
+              key={status}
+              aria-hidden
+              {...stylex.props(styles.face, styles.status)}
+            >
               {status === 'copied' && (
                 <Check
                   aria-hidden
@@ -102,7 +108,7 @@ export function CopyButton({
         )}
       </button>
       <output aria-live="polite" {...stylex.props(styles.announcer)}>
-        {status && LABELS[status]}
+        {status && <span key={copies}>{LABELS[status]}</span>}
       </output>
     </>
   );
@@ -147,7 +153,7 @@ const styles = stylex.create({
     gap: '0.5rem',
   },
   hidden: {
-    visibility: 'hidden',
+    opacity: 0,
   },
   status: {
     animationName: { default: null, [MOTION]: rise },

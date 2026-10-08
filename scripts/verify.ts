@@ -46,6 +46,7 @@ export const EDIT_CHECKS: readonly Check[] = [
   },
   script('typecheck'),
   script('lint'),
+  script('lint:shell'),
   script('format:check'),
 ];
 

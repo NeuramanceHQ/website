@@ -82,7 +82,7 @@ const structuredData = {
   '@type': 'Organization',
   name: 'Neuramance',
   url: 'https://neuramance.com',
-  logo: 'https://neuramance.com/opengraph-image.jpg',
+  logo: 'https://neuramance.com/logo.svg',
   description:
     'Neuramance lets AI agents like Claude Code and Codex quote, order, and track real metal parts and fabrication, programmatically.',
   foundingDate: '2025',

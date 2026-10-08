@@ -2,19 +2,28 @@
 
 import * as stylex from '@stylexjs/stylex';
 import { X } from 'lucide-react';
-import { useState, type ReactNode } from 'react';
+import { useRef, useState, type ReactNode } from 'react';
 import { colors } from '@/lib/tokens.stylex';
 
 export function Announcement({ children }: { children: ReactNode }) {
   const [open, setOpen] = useState(true);
+  const bar = useRef<HTMLElement>(null);
   if (!open) return null;
+  const dismiss = () => {
+    if (bar.current?.contains(document.activeElement)) {
+      bar.current.nextElementSibling
+        ?.querySelector<HTMLElement>('a[href], button')
+        ?.focus();
+    }
+    setOpen(false);
+  };
   return (
-    <aside aria-label="Announcement" {...stylex.props(styles.bar)}>
+    <aside ref={bar} aria-label="Announcement" {...stylex.props(styles.bar)}>
       <p {...stylex.props(styles.text)}>{children}</p>
       <button
         type="button"
         aria-label="Dismiss announcement"
-        onClick={() => setOpen(false)}
+        onClick={dismiss}
         {...stylex.props(styles.close)}
       >
         <X aria-hidden {...stylex.props(styles.icon)} />
