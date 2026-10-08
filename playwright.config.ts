@@ -4,12 +4,13 @@ const baseURL = 'http://127.0.0.1:3100';
 
 export default defineConfig({
   testDir: 'e2e',
-  forbidOnly: !!process.env.CI,
-  use: { baseURL },
+  forbidOnly: true,
+  fullyParallel: true,
+  use: { baseURL, trace: 'retain-on-failure' },
   projects: [{ name: 'chromium', use: devices['Desktop Chrome'] }],
   webServer: {
-    command: 'bun run build && bun run start',
+    command: 'bun run start',
     url: baseURL,
-    timeout: 300_000,
+    timeout: 30_000,
   },
 });

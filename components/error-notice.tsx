@@ -2,7 +2,7 @@ import * as stylex from '@stylexjs/stylex';
 import { panel } from '@/components/styles';
 import { colors } from '@/lib/tokens.stylex';
 
-export default function ErrorPage() {
+export function ErrorNotice() {
   return (
     <main {...stylex.props(panel.page)}>
       <section {...stylex.props(panel.card)}>

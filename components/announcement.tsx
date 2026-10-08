@@ -58,7 +58,6 @@ const styles = stylex.create({
     color: colors.muted,
     backgroundColor: {
       default: null,
-      ':focus-visible': 'rgb(255 255 255 / 0.1)',
       '@media (hover: hover)': {
         default: null,
         ':hover': 'rgb(255 255 255 / 0.1)',

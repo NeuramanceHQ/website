@@ -1,5 +1,5 @@
 import babel from '@rolldown/plugin-babel';
-import { defineConfig } from 'vitest/config';
+import { configDefaults, defineConfig } from 'vitest/config';
 import babelConfig from './babel.config.js';
 
 export default defineConfig({
@@ -7,6 +7,8 @@ export default defineConfig({
   resolve: { tsconfigPaths: true },
   test: {
     environment: 'jsdom',
-    include: ['**/*.test.tsx'],
+    include: ['**/*.test.{ts,tsx}'],
+    exclude: [...configDefaults.exclude, '.claude/**'],
+    allowOnly: false,
   },
 });

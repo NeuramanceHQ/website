@@ -52,6 +52,11 @@ export const button = stylex.create({
     transform: { default: null, ':active': 'translateY(1px)' },
     transitionProperty: 'background-color, box-shadow, transform',
     transitionDuration: '120ms',
+    '::after': {
+      content: '""',
+      position: 'absolute',
+      inset: -4,
+    },
   },
   metal: {
     backgroundImage: {
@@ -134,6 +139,26 @@ export const tag = stylex.create({
     textTransform: 'none',
     color: colors.foreground,
     backgroundColor: 'rgb(255 255 255 / 0.08)',
+  },
+  label: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: 8,
+    fontSize: 11,
+    fontWeight: 500,
+    letterSpacing: '0.04em',
+    textTransform: 'uppercase',
+  },
+});
+
+export const text = stylex.create({
+  lead: {
+    marginTop: '1.25rem',
+    maxWidth: '62rem',
+    fontSize: 'clamp(1.125rem, 2vw, 1.5rem)',
+    lineHeight: 1.4,
+    letterSpacing: '-0.01em',
+    color: colors.muted,
   },
 });
 

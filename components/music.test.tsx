@@ -27,6 +27,22 @@ it('blends the loop head into the tail at constant combined power', () => {
   expect(headWeights[FADE - 1]).toBeGreaterThan(0.95);
 });
 
+it('blends each head sample into the matching tail position', () => {
+  const headWeights = weights(1, 0);
+  const samples = new Float32Array(LENGTH);
+  samples.set(
+    Array.from({ length: FADE }, (_, index) => index + 1),
+    0,
+  );
+  bakeCrossfade(samples, FADE);
+  for (let index = 1; index < FADE; index++) {
+    expect(samples[LENGTH - FADE + index] / headWeights[index]).toBeCloseTo(
+      index + 1,
+      5,
+    );
+  }
+});
+
 it('leaves everything outside the tail untouched', () => {
   const samples = Float32Array.from({ length: LENGTH }, (_, index) => index);
   bakeCrossfade(samples, FADE);

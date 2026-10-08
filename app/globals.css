@@ -16,6 +16,7 @@
 
   html {
     line-height: 1.5;
+    scroll-padding-block: 65px 57px;
     -webkit-text-size-adjust: 100%;
     -webkit-tap-highlight-color: transparent;
   }
@@ -45,6 +46,12 @@
 
   :focus {
     outline: none;
+  }
+
+  :focus-visible {
+    box-shadow:
+      0 0 0 2px #050506,
+      0 0 0 4px #f5f5f2;
   }
 
   @media (prefers-reduced-motion: no-preference) {

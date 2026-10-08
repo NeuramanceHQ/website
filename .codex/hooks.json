@@ -1,0 +1,16 @@
+{
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "^apply_patch$",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "root=$(git rev-parse --show-toplevel) || exit 2; exec bun \"$root/scripts/codex-hook.ts\"",
+            "timeout": 30
+          }
+        ]
+      }
+    ]
+  }
+}

@@ -69,12 +69,10 @@ const styles = stylex.create({
     cursor: 'pointer',
     color: {
       default: colors.faint,
-      ':focus-visible': colors.foreground,
       [HOVER]: { default: null, ':hover': colors.foreground },
     },
     backgroundColor: {
       default: null,
-      ':focus-visible': 'rgb(255 255 255 / 0.1)',
       [HOVER]: { default: null, ':hover': 'rgb(255 255 255 / 0.1)' },
     },
   },

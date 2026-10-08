@@ -1,8 +1,13 @@
 import * as stylex from '@stylexjs/stylex';
 import type { Metadata, Viewport } from 'next';
 import localFont from 'next/font/local';
+import Link from 'next/link';
+import { Announcement } from '@/components/announcement';
+import { Footer } from '@/components/footer';
+import { MetalLight } from '@/components/metal-light';
+import { Nav } from '@/components/nav';
 import { VideoBackground } from '@/components/video-background';
-import { BACKGROUND_VIDEO_ID } from '@/lib/site';
+import { BACKGROUND_VIDEO_ID, OPEN_GRAPH } from '@/lib/site';
 import { colors, fonts } from '@/lib/tokens.stylex';
 import './globals.css';
 
@@ -35,26 +40,7 @@ export const metadata: Metadata = {
       { url: '/favicon.ico', sizes: 'any' },
     ],
   },
-  alternates: {
-    canonical: 'https://neuramance.com',
-  },
-  openGraph: {
-    type: 'website',
-    locale: 'en_US',
-    url: 'https://neuramance.com',
-    siteName: 'Neuramance',
-    title: 'Neuramance® - Metal Parts for AI Agents',
-    description:
-      'Your agent sends the CAD file; we ship the metal part. CNC machining, sheet metal, laser cutting, and finishing for Claude Code, Codex, and any AI agent.',
-    images: [
-      {
-        url: '/opengraph-image.jpg',
-        width: 1200,
-        height: 630,
-        alt: 'Neuramance - Metal Parts for AI Agents',
-      },
-    ],
-  },
+  openGraph: OPEN_GRAPH,
   twitter: {
     card: 'summary_large_image',
     title: 'Neuramance® - Metal Parts for AI Agents',
@@ -100,7 +86,7 @@ const structuredData = {
   description:
     'Neuramance lets AI agents like Claude Code and Codex quote, order, and track real metal parts and fabrication, programmatically.',
   foundingDate: '2025',
-  sameAs: ['https://twitter.com/neuramance', 'https://github.com/neuramance'],
+  sameAs: ['https://twitter.com/neuramance', 'https://github.com/NeuramanceHQ'],
   contactPoint: {
     '@type': 'ContactPoint',
     contactType: 'customer support',
@@ -119,7 +105,20 @@ export default function RootLayout({ children }: LayoutProps<'/'>) {
       </head>
       <body {...stylex.props(styles.body)} suppressHydrationWarning>
         <VideoBackground videoId={BACKGROUND_VIDEO_ID} />
+        <Announcement>
+          New: your AI agent can now request beta access for you.{' '}
+          <Link
+            href="/llms.txt"
+            prefetch={false}
+            {...stylex.props(styles.link)}
+          >
+            Read the agent guide
+          </Link>
+        </Announcement>
+        <Nav />
         {children}
+        <Footer />
+        <MetalLight />
       </body>
     </html>
   );
@@ -134,5 +133,11 @@ const styles = stylex.create({
     MozOsxFontSmoothing: 'grayscale',
     color: colors.foreground,
     backgroundColor: colors.background,
+  },
+  link: {
+    marginLeft: '0.5rem',
+    textDecorationLine: 'underline',
+    textUnderlineOffset: '0.2em',
+    whiteSpace: 'nowrap',
   },
 });

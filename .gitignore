@@ -25,12 +25,14 @@ yarn-debug.log*
 yarn-error.log*
 
 # local env files
-.env*.local
-.env
+.env*
 
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# agent worktrees
+/.claude/worktrees/
 
 # vscode
 .vscode/

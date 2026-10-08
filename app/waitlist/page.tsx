@@ -1,11 +1,23 @@
 import * as stylex from '@stylexjs/stylex';
+import type { Metadata } from 'next';
 import { panel } from '@/components/styles';
+import { OPEN_GRAPH } from '@/lib/site';
 import { colors, fonts } from '@/lib/tokens.stylex';
+
+export const metadata: Metadata = {
+  title: 'Waitlist',
+  robots: { index: false },
+  openGraph: {
+    ...OPEN_GRAPH,
+    title: 'Waitlist | Neuramance®',
+    url: '/waitlist',
+  },
+};
 
 export default function Page() {
   return (
     <main {...stylex.props(panel.page)}>
-      <section role="alert" {...stylex.props(panel.card)}>
+      <section {...stylex.props(panel.card)}>
         <p {...stylex.props(panel.label)}>
           <span aria-hidden {...stylex.props(styles.dot)} />
           Status — confirmed

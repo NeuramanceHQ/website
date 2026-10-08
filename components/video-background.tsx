@@ -114,11 +114,12 @@ export function VideoBackground({ videoId }: { videoId: string }) {
       window.onYouTubeIframeAPIReady = undefined;
       player?.destroy();
       element.replaceChildren();
+      setVisible(false);
     };
   }, [motionOk, videoId]);
 
   return (
-    <div aria-hidden {...stylex.props(styles.layer)}>
+    <div aria-hidden inert {...stylex.props(styles.layer)}>
       <div {...stylex.props(styles.frame, styles.poster(`url(${poster})`))}>
         <div
           ref={container}

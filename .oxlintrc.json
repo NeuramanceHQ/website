@@ -1,7 +1,7 @@
 {
   "$schema": "./node_modules/oxlint/configuration_schema.json",
-  "plugins": ["nextjs", "typescript"],
-  "jsPlugins": ["@stylexjs/eslint-plugin"],
+  "plugins": ["nextjs", "typescript", "oxc", "unicorn"],
+  "jsPlugins": ["@stylexjs/eslint-plugin", "./scripts/lint-rules.mts"],
   "categories": {
     "correctness": "error"
   },
@@ -61,7 +61,39 @@
     "@stylexjs/no-nonstandard-styles": "error",
     "@stylexjs/no-unused": "error",
     "@stylexjs/valid-shorthands": "error",
-    "@stylexjs/valid-styles": "error"
+    "@stylexjs/valid-styles": "error",
+    "complexity": [
+      "error",
+      {
+        "max": 10,
+        "variant": "classic"
+      }
+    ],
+    "max-depth": [
+      "error",
+      {
+        "max": 3
+      }
+    ],
+    "max-lines": [
+      "error",
+      {
+        "max": 500,
+        "skipBlankLines": false,
+        "skipComments": false
+      }
+    ],
+    "max-lines-per-function": [
+      "error",
+      {
+        "max": 100,
+        "skipBlankLines": false,
+        "skipComments": false,
+        "IIFEs": true
+      }
+    ],
+    "local/no-comments": "error",
+    "local/no-tautological-assertion": "error"
   },
   "overrides": [
     {

@@ -39,10 +39,44 @@ it('copies the exact text and clears its status after two seconds', async () => 
   expect(status.textContent).toBe('Copied');
 
   act(() => {
-    vi.advanceTimersByTime(2000);
+    vi.advanceTimersByTime(1999);
   });
+  expect(status.textContent).toBe('Copied');
 
+  act(() => {
+    vi.advanceTimersByTime(1);
+  });
   expect(screen.getByRole('status')).toBe(status);
+  expect(status.textContent).toBe('');
+});
+
+it('restarts the two seconds when copied again', async () => {
+  vi.useFakeTimers();
+  Object.defineProperty(navigator, 'clipboard', {
+    configurable: true,
+    value: { writeText: vi.fn().mockResolvedValue(undefined) },
+  });
+  render(<CopyButton text="Agent prompt">Copy agent prompt</CopyButton>);
+  const button = screen.getByRole('button', { name: 'Copy agent prompt' });
+  const status = screen.getByRole('status');
+
+  await act(async () => {
+    fireEvent.click(button);
+  });
+  act(() => {
+    vi.advanceTimersByTime(1500);
+  });
+  await act(async () => {
+    fireEvent.click(button);
+  });
+  act(() => {
+    vi.advanceTimersByTime(1999);
+  });
+  expect(status.textContent).toBe('Copied');
+
+  act(() => {
+    vi.advanceTimersByTime(1);
+  });
   expect(status.textContent).toBe('');
 });
 

@@ -73,7 +73,7 @@ export function Footer() {
         <span>© Neuramance</span>
         <SoundButton
           sound="/audio/dune1-intro.mp3"
-          aria-label="Play audio quote"
+          title="Play audio quote"
           {...stylex.props(styles.quote)}
         >
           A company&apos;s excellence is conveyed in everything it does.

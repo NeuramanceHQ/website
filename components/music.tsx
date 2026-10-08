@@ -74,6 +74,10 @@ function audible() {
   return getWanted() && !document.hidden && matchMedia(ROOM_QUERY).matches;
 }
 
+function resumable({ state }: AudioContext) {
+  return state !== 'running' && state !== 'closed';
+}
+
 function transient(error: unknown) {
   return (
     error instanceof TypeError ||
@@ -166,7 +170,7 @@ async function sync() {
   const current = ensureEngine();
   window.clearTimeout(current.suspendTimer);
   current.suspendTimer = 0;
-  if (current.context.state === 'suspended') void current.context.resume();
+  if (resumable(current.context)) void current.context.resume();
   current.buffer ??= loadTrack(current.context);
   const buffer = await current.buffer;
   if (!buffer) {
@@ -190,7 +194,7 @@ async function sync() {
 }
 
 function toggle() {
-  if (getWanted() && engine?.context.state === 'suspended' && audible()) {
+  if (getWanted() && engine && resumable(engine.context) && audible()) {
     void engine.context.resume();
     return;
   }

@@ -4,7 +4,7 @@ export const colors = stylex.defineConsts({
   background: '#050506',
   foreground: '#f5f5f2',
   muted: 'rgb(245 245 242 / 0.62)',
-  faint: 'rgb(245 245 242 / 0.4)',
+  faint: 'rgb(245 245 242 / 0.5)',
   line: 'rgb(255 255 255 / 0.1)',
   card: '#17171a',
   lime: '#e4f222',
