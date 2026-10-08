@@ -4,15 +4,17 @@
       "Bash(git:*)",
       "Bash(tmux:*)",
       "Bash(ls:*)",
-      "Bash(bun:*)",
+      "Bash(bun run:*)",
+      "Bash(bun install:*)",
+      "Bash(bun add:*)",
+      "Bash(bun outdated:*)",
+      "Bash(scripts/agent-verify:*)",
       "Bash(mkdir:*)",
       "Bash(code:*)",
       "WebFetch(domain:*)",
-      "Bash(system_profiler:*)",
-      "Bash(diskutil:*)",
-      "Bash(sw_vers)",
       "Read(~/.zshrc)"
     ],
+    "ask": ["Bash(git push:*)", "Bash(git * push)", "Bash(git * push *)"],
     "deny": [
       "Bash(rm -rf:*)",
       "Bash(sudo:*)",
@@ -20,8 +22,7 @@
       "Read(./.env)",
       "Read(./.env.*)",
       "Read(./secrets/**)",
-      "Read(./config/credentials.json)",
-      "Read(./build)"
+      "Read(./config/credentials.json)"
     ]
   }
 }
