@@ -4,10 +4,11 @@ import {
   mkdtempSync,
   readFileSync,
   rmSync,
+  symlinkSync,
   writeFileSync,
 } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { join, resolve } from 'node:path';
+import { dirname, join, resolve } from 'node:path';
 import { expect, it } from 'vitest';
 
 const root = resolve(import.meta.dirname, '..');
@@ -191,6 +192,97 @@ it('lints and checks the formatting of files that ignore files or nested configs
   } finally {
     rmSync(directory, { recursive: true, force: true });
   }
+});
+
+function lintRepository(sources: Record<string, string>): string[] {
+  const directory = mkdtempSync(join(tmpdir(), 'lint layers '));
+  try {
+    const config = JSON.parse(
+      readFileSync(join(root, '.oxlintrc.json'), 'utf8'),
+    ) as { jsPlugins: string[] };
+    config.jsPlugins = config.jsPlugins.map((plugin) =>
+      plugin.startsWith('./') ? join(root, plugin) : plugin,
+    );
+    writeFileSync(join(directory, '.oxlintrc.json'), JSON.stringify(config));
+    writeFileSync(
+      join(directory, 'tsconfig.json'),
+      JSON.stringify({
+        compilerOptions: {
+          strict: true,
+          jsx: 'react-jsx',
+          module: 'esnext',
+          moduleResolution: 'bundler',
+          noEmit: true,
+          skipLibCheck: true,
+          paths: { '@/*': ['./*'] },
+        },
+      }),
+    );
+    symlinkSync(join(root, 'node_modules'), join(directory, 'node_modules'));
+    for (const [name, source] of Object.entries(sources)) {
+      mkdirSync(dirname(join(directory, name)), { recursive: true });
+      writeFileSync(join(directory, name), source);
+    }
+    const result = spawnSync(
+      join(root, 'node_modules/.bin/oxlint'),
+      [
+        '--disable-nested-config',
+        '--no-ignore',
+        '--format=unix',
+        ...new Set(Object.keys(sources).map((name) => name.split('/')[0])),
+      ],
+      { cwd: directory, encoding: 'utf8', timeout: 10_000 },
+    );
+    return [
+      ...result.stdout.matchAll(
+        /^([\w./-]+\.tsx?):(\d+):\d+: .* \[Error\/(.+)\]$/gm,
+      ),
+    ]
+      .map(([, file, line, rule]) => `${file}:${line} ${rule}`)
+      .toSorted();
+  } finally {
+    rmSync(directory, { recursive: true, force: true });
+  }
+}
+
+it('keeps imports flowing from app/ to components/ to lib/, without cycles, and keeps e2e/ black-box', () => {
+  expect(
+    lintRepository({
+      'lib/site.ts': "export const SITE = 'site';\n",
+      'lib/a.ts':
+        "import { b } from '@/lib/b';\nexport const a = (): string => b();\n",
+      'lib/b.ts':
+        "import { a } from '@/lib/a';\nexport const b = (): string => a();\n",
+      'lib/upward.ts':
+        "import { Thing } from '@/components/thing';\nexport const up = Thing;\n",
+      'lib/nested.ts':
+        "import { Button } from '@/components/ui/button';\nexport const nested = Button;\n",
+      'lib/parent.ts':
+        "import { Thing } from '../components/thing';\nexport const parent = Thing;\n",
+      'components/thing.tsx':
+        "import { SITE } from '@/lib/site';\nexport const Thing = (): string => SITE;\n",
+      'components/ui/button.tsx':
+        "export const Button = (): string => 'button';\n",
+      'components/upward.tsx':
+        "import Page from '@/app/page';\nexport const Up = Page;\n",
+      'app/page.tsx':
+        "import { Thing } from '@/components/thing';\nimport { SITE } from '@/lib/site';\nexport default function Page(): string {\n  return Thing() + SITE;\n}\n",
+      'app/tooling.ts':
+        "import { tool } from '@/scripts/tool';\nexport const used = tool;\n",
+      'scripts/tool.ts': "export const tool = 'tool';\n",
+      'e2e/peek.spec.ts':
+        "import { SITE } from '@/lib/site';\nexport const peek = SITE;\n",
+    }),
+  ).toEqual([
+    'app/tooling.ts:1 eslint(no-restricted-imports)',
+    'components/upward.tsx:1 eslint(no-restricted-imports)',
+    'e2e/peek.spec.ts:1 eslint(no-restricted-imports)',
+    'lib/a.ts:1 import(no-cycle)',
+    'lib/b.ts:1 import(no-cycle)',
+    'lib/nested.ts:1 eslint(no-restricted-imports)',
+    'lib/parent.ts:1 import(no-relative-parent-imports)',
+    'lib/upward.ts:1 eslint(no-restricted-imports)',
+  ]);
 });
 
 function branching(complexity: number): string {

@@ -1,6 +1,6 @@
 {
   "$schema": "./node_modules/oxlint/configuration_schema.json",
-  "plugins": ["nextjs", "typescript", "oxc", "unicorn"],
+  "plugins": ["nextjs", "typescript", "oxc", "unicorn", "import"],
   "jsPlugins": ["@stylexjs/eslint-plugin", "./scripts/lint-rules.mts"],
   "categories": {
     "correctness": "error"
@@ -93,7 +93,9 @@
       }
     ],
     "local/no-comments": "error",
-    "local/no-tautological-assertion": "error"
+    "local/no-tautological-assertion": "error",
+    "import/no-cycle": "error",
+    "import/no-relative-parent-imports": "error"
   },
   "overrides": [
     {
@@ -173,6 +175,95 @@
         "prefer-const": "error",
         "prefer-rest-params": "error",
         "prefer-spread": "error"
+      }
+    },
+    {
+      "files": ["lib/**"],
+      "rules": {
+        "no-restricted-imports": [
+          "error",
+          {
+            "patterns": [
+              {
+                "group": [
+                  "@/app",
+                  "@/app/**",
+                  "@/components",
+                  "@/components/**",
+                  "@/e2e",
+                  "@/e2e/**",
+                  "@/scripts",
+                  "@/scripts/**"
+                ],
+                "message": "lib/ is the bottom layer: import only lib/ and packages, and take anything from components/ or app/ as an argument."
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "files": ["components/**"],
+      "rules": {
+        "no-restricted-imports": [
+          "error",
+          {
+            "patterns": [
+              {
+                "group": [
+                  "@/app",
+                  "@/app/**",
+                  "@/e2e",
+                  "@/e2e/**",
+                  "@/scripts",
+                  "@/scripts/**"
+                ],
+                "message": "components/ may import components/, lib/, and packages; app/ composes components, never the reverse."
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "files": ["app/**"],
+      "rules": {
+        "no-restricted-imports": [
+          "error",
+          {
+            "patterns": [
+              {
+                "group": ["@/e2e", "@/e2e/**", "@/scripts", "@/scripts/**"],
+                "message": "app/ is the site; it must not import e2e/ tests or scripts/ tooling."
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "files": ["e2e/**"],
+      "rules": {
+        "no-restricted-imports": [
+          "error",
+          {
+            "patterns": [
+              {
+                "group": [
+                  "@/app",
+                  "@/app/**",
+                  "@/components",
+                  "@/components/**",
+                  "@/lib",
+                  "@/lib/**",
+                  "@/scripts",
+                  "@/scripts/**"
+                ],
+                "message": "e2e tests drive the built site through the browser; check behavior there instead of importing its code."
+              }
+            ]
+          }
+        ]
       }
     }
   ]
