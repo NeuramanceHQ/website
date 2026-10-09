@@ -2,10 +2,11 @@
 import { spawnSync, type SpawnSyncReturns } from 'node:child_process';
 import { lstatSync, readFileSync, readlinkSync, realpathSync } from 'node:fs';
 import { isAbsolute, resolve, sep } from 'node:path';
+import { runCheck } from './verify';
 
 const GATE_TIMEOUT_MS = 25_000;
 const PATCHED_FILE =
-  /^\*\*\* (?:Add File|Update File|Delete File|Move to): (.+)$/gm;
+  /^\s*\*\*\* (Add File|Update File|Delete File|Move to): (.+)$/gm;
 
 type Reply = { exitCode: 0 | 2; stdout: string; stderr: string };
 
@@ -102,12 +103,12 @@ function repository(directory: string, deadline: number): string | undefined {
 }
 
 function changedRepositories(
-  paths: string[],
+  paths: { path: string; edited: boolean }[],
   deadline: number,
   notices: string[],
 ): Map<string, string[]> {
   const repositories = new Map<string, string[]>();
-  for (const path of paths) {
+  for (const { path, edited } of paths) {
     const target = location(path);
     const root = repository(target.directory, deadline);
     if (root === undefined) {
@@ -115,41 +116,67 @@ function changedRepositories(
       continue;
     }
     const files = repositories.get(root) ?? [];
-    files.push(target.path);
+    if (edited && lstatSync(target.path, { throwIfNoEntry: false })?.isFile()) {
+      files.push(target.path);
+    }
     repositories.set(root, files);
   }
   return repositories;
 }
 
-function verify(root: string, paths: string[], deadline: number): string {
+async function verify(
+  root: string,
+  paths: string[],
+  deadline: number,
+): Promise<string> {
   try {
-    const gate = spawnSync(resolve(root, 'scripts/agent-verify'), paths, {
-      cwd: root,
-      encoding: 'utf8',
-      timeout: remaining(deadline),
-      killSignal: 'SIGINT',
-    });
-    const reason = failure(gate);
-    return reason === undefined
-      ? ''
-      : `agent-verify failed in ${root}: ${reason}\n${gate.stdout ?? ''}${gate.stderr ?? ''}`;
+    const gate = await runCheck(
+      {
+        name: 'agent-verify',
+        command: [resolve(root, 'scripts/agent-verify'), ...paths],
+      },
+      root,
+      process.env,
+      remaining(deadline),
+      new Set(),
+    );
+    let reason = `exited ${gate.status}`;
+    if (gate.timedOut) reason = 'timed out';
+    else if (gate.signal !== null) reason = `killed by ${gate.signal}`;
+    else if (gate.status === null) reason = 'could not start';
+    else if (gate.status === 0) return '';
+    return `agent-verify failed in ${root}: ${reason}\n${gate.output}\n`;
   } catch (error) {
     return `agent-verify failed in ${root}: ${String(error)}\n`;
   }
 }
 
-export function handle(input: string, deadline: number): Reply {
+export async function handle(input: string, deadline: number): Promise<Reply> {
   const notices: string[] = [];
   let stderr = '';
   try {
     const { cwd, patch } = parse(input);
-    const paths = [...patch.matchAll(PATCHED_FILE)].map((match) =>
-      isAbsolute(match[1]) ? match[1] : `${cwd}/${match[1]}`,
-    );
+    const headers = [...patch.matchAll(PATCHED_FILE)];
+    const paths = headers.map((match, index) => {
+      const path = match[2].trim();
+      return {
+        path: isAbsolute(path) ? path : `${cwd}/${path}`,
+        edited:
+          match[1] !== 'Delete File' && headers[index + 1]?.[1] !== 'Move to',
+      };
+    });
     const fallback = paths.length === 0;
-    if (fallback) paths.push(cwd);
+    if (fallback) paths.push({ path: cwd, edited: false });
     const repositories = changedRepositories(paths, deadline, notices);
     for (const [root, paths] of repositories) {
+      if (fallback) {
+        notices.push(`Full gate fallback in ${root} for ${cwd}`);
+      } else if (paths.length === 0) {
+        notices.push(
+          `Skipped ${root}: no existing edited files; left to the turn-end gate`,
+        );
+        continue;
+      }
       if (
         lstatSync(resolve(root, 'scripts/agent-verify'), {
           throwIfNoEntry: false,
@@ -158,11 +185,13 @@ export function handle(input: string, deadline: number): Reply {
         notices.push(`Skipped ${root}: no scripts/agent-verify`);
         continue;
       }
-      stderr += verify(root, paths, deadline);
-      if (fallback) notices.push(`Focused fallback in ${root} for ${cwd}`);
+      stderr += await verify(root, paths, deadline);
     }
   } catch (error) {
     stderr += `codex-hook: ${String(error)}\n`;
+  }
+  if (stderr !== '') {
+    stderr += notices.map((notice) => `${notice}\n`).join('');
   }
   return {
     exitCode: stderr === '' ? 0 : 2,
@@ -176,7 +205,7 @@ export function handle(input: string, deadline: number): Reply {
 
 if (import.meta.main) {
   const deadline = Date.now() + GATE_TIMEOUT_MS;
-  const reply = handle(readFileSync(0, 'utf8'), deadline);
+  const reply = await handle(readFileSync(0, 'utf8'), deadline);
   process.stdout.write(reply.stdout);
   process.stderr.write(reply.stderr);
   process.exitCode = reply.exitCode;
