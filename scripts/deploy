@@ -8,7 +8,7 @@ exec 9>"$site/deploy.lock"
 flock --nonblock 9 || exit 0
 
 report() {
-    timeout 30 gh api --silent "repos/NeuramanceHQ/website/statuses/$sha" \
+    timeout 30 gh api --silent "repos/NeuramanceHQ/site/statuses/$sha" \
         -f state="$1" -f context=deploy/i9 -f description="$2" -f target_url=https://neuramance.com \
         || echo "could not report $1 to GitHub" >&2
 }

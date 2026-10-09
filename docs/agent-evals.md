@@ -54,10 +54,10 @@ Give each task an expected file set (for example `app/page.tsx` and a new compon
 
 ## Harness
 
-Build it in a separate private repository, for example `~/code/website-evals`. This repo is public, and an agent reads everything in its workspace, so hidden checks and reference solutions must never live here.
+Build it in a separate private repository, for example `~/code/nm/site-evals`. This repo is public, and an agent reads everything in its workspace, so hidden checks and reference solutions must never live here.
 
 ```text
-website-evals/
+site-evals/
   tasks/<task>/task.json        base commit, setup, expected files, limits
   tasks/<task>/prompt.md
   tasks/<task>/hidden/*.spec.ts Playwright checks copied in only for grading
@@ -70,7 +70,7 @@ website-evals/
 
 ### One run
 
-1. **Prepare an isolated clone** at a fixed slot path, for example `/tmp/website-eval/slot-1`: `git clone --shared` this repo, check out the condition, then `git remote remove origin`. Pushing `main` deploys production, so a clone must never have a push target, and runs never touch the main checkout.
+1. **Prepare an isolated clone** at a fixed slot path, for example `/tmp/site-eval/slot-1`: `git clone --shared` this repo, check out the condition, then `git remote remove origin`. Pushing `main` deploys production, so a clone must never have a push target, and runs never touch the main checkout.
 2. **Apply the task setup and commit it**, so the agent starts from a clean tree. That means planting the bug for `safari-interruption`, deleting tests that would reveal it, and deleting `docs/agent-evals.md` so the plan does not prime the agent. Then run `bun install --frozen-lockfile`, which completes from the warm cache.
 3. **Run the agent** with a hard timeout, from inside the clone:
    - Claude Code: `timeout 30m claude -p "$(cat prompt.md)" --model <pinned id> --output-format stream-json --verbose --permission-mode bypassPermissions --permission-prompts none --max-turns 200 --max-budget-usd <cap> --no-session-persistence`. Commands that hit an `ask` rule are denied rather than hanging.
