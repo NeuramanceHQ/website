@@ -1,5 +1,6 @@
 import { spawnSync } from 'node:child_process';
 import {
+  copyFileSync,
   mkdirSync,
   mkdtempSync,
   readFileSync,
@@ -10,6 +11,7 @@ import {
 import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { expect, it } from 'vitest';
+import { runCheck } from './verify';
 
 const root = resolve(import.meta.dirname, '..');
 
@@ -39,7 +41,7 @@ function lint(sources: Record<string, string>): string[] {
 
 const TAUTOLOGY = 'local(no-tautological-assertion)';
 
-const vitestImports = `import { expect, expect as check, it } from 'vitest';
+const vitestImports = `import { expect, expect as check, it, vi } from 'vitest';
 import { expect as assertThat } from 'chai';
 
 it('compares values', () => {
@@ -70,6 +72,21 @@ it('uses the test context expect', ({ expect }) => {
 
 it('renames the test context expect', ({ expect: verify }) => {
   verify(2).toBe(2);
+});
+
+it('checks mock calls', () => {
+  const mock = vi.fn((value: number) => value);
+  mock(1);
+  expect(mock).toHaveBeenCalledWith(1);
+  expect(mock).toHaveBeenCalledTimes(1);
+  expect(mock.mock.calls).toEqual([[1]]);
+  const target = { accept: (value: number) => value };
+  const spy = vi.spyOn(target, 'accept');
+  target.accept(1);
+  expect(spy).toHaveBeenCalledWith(1);
+  expect(spy).toHaveBeenCalledTimes(1);
+  expect(spy.mock.calls).toEqual([[1]]);
+  spy.mockRestore();
 });
 `;
 
@@ -321,21 +338,105 @@ function longFile(lines: number): string {
 }
 
 it('enforces each complexity ceiling at its boundary', () => {
+  const switches = Object.fromEntries(
+    [9, 10].map((count) => [
+      `switch-${count}.ts`,
+      `export function choose(value: number): number {\n  switch (value) {\n${Array.from(
+        { length: count },
+        (_, index) => `    case ${index}: return ${index};\n`,
+      ).join('')}    default: return -1;\n  }\n}\n`,
+    ]),
+  );
   expect(
     lint({
+      ...switches,
       'complexity-10.ts': branching(10),
       'complexity-11.ts': branching(11),
       'depth-3.ts': nested(3),
       'depth-4.ts': nested(4),
       'function-100.ts': longFunction(100),
       'function-101.ts': longFunction(101),
+      'function-blank-100.ts': longFunction(99).replace('\n', '\n\n'),
+      'function-blank-101.ts': longFunction(100).replace('\n', '\n\n'),
+      'function-comment-101.ts': longFunction(100).replace(
+        '\n',
+        '\n  // counted\n',
+      ),
+      'iife-101.ts': `${longFunction(101).replace('export function sum()', '(function()').trimEnd()})();\n`,
       'file-500.ts': longFile(500),
       'file-501.ts': longFile(501),
+      'file-blank-500.ts': longFile(499).replace('\n', '\n\n'),
+      'file-blank-501.ts': longFile(500).replace('\n', '\n\n'),
     }),
   ).toEqual([
     'complexity-11.ts:1 eslint(complexity)',
     'depth-4.ts:5 eslint(max-depth)',
     'file-501.ts:501 eslint(max-lines)',
+    'file-blank-501.ts:501 eslint(max-lines)',
     'function-101.ts:1 eslint(max-lines-per-function)',
+    'function-blank-101.ts:1 eslint(max-lines-per-function)',
+    'function-comment-101.ts:1 eslint(max-lines-per-function)',
+    'function-comment-101.ts:2 local(no-comments)',
+    'iife-101.ts:1 eslint(max-lines-per-function)',
+    'switch-10.ts:1 eslint(complexity)',
   ]);
 });
+
+it('enforces complexity across repository paths through the lint script', async () => {
+  const directory = mkdtempSync(join(tmpdir(), 'lint coverage '));
+  try {
+    for (const file of [
+      '.gitignore',
+      '.oxlintrc.json',
+      'tsconfig.json',
+      'scripts/lint-rules.mts',
+      'package.json',
+    ]) {
+      mkdirSync(dirname(join(directory, file)), { recursive: true });
+      copyFileSync(join(root, file), join(directory, file));
+    }
+    symlinkSync(join(root, 'node_modules'), join(directory, 'node_modules'));
+    for (const file of [
+      'app/x.tsx',
+      'components/x.tsx',
+      'components/x.test.ts',
+      'components/x.test.tsx',
+      'lib/x.ts',
+      'e2e/x.spec.ts',
+      'scripts/x.ts',
+      'scripts/x.mts',
+    ]) {
+      mkdirSync(dirname(join(directory, file)), { recursive: true });
+      writeFileSync(join(directory, file), branching(11));
+    }
+    const result = await runCheck(
+      { name: 'lint', command: ['bun', 'run', '--silent', 'lint'] },
+      directory,
+      process.env,
+      10_000,
+      new Set(),
+    );
+    expect(result.timedOut, result.output).toBe(false);
+    expect(result.status, result.output).toBe(1);
+    expect(
+      [
+        ...result.output.matchAll(
+          /^([\w./-]+\.[cm]?tsx?):\d+:\d+: error eslint\(complexity\): /gm,
+        ),
+      ]
+        .map(([, file]) => file)
+        .toSorted(),
+    ).toEqual([
+      'app/x.tsx',
+      'components/x.test.ts',
+      'components/x.test.tsx',
+      'components/x.tsx',
+      'e2e/x.spec.ts',
+      'lib/x.ts',
+      'scripts/x.mts',
+      'scripts/x.ts',
+    ]);
+  } finally {
+    rmSync(directory, { recursive: true, force: true });
+  }
+}, 15_000);

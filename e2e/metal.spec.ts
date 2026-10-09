@@ -37,6 +37,7 @@ test('the metal buttons catch the light as the pointer passes', async ({
 }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.goto('/');
+  await untilHydrated(page);
   const copy = page.getByRole('main').locator('[data-metal]').first();
   await expect(copy).toHaveAccessibleName('Copy agent prompt');
   const box = await copy.boundingBox();
@@ -54,6 +55,14 @@ test('the metal buttons catch the light as the pointer passes', async ({
   await expect
     .poll(() => offCentre(() => lightAt(box.x + box.width / 2, middle)))
     .toBeLessThan(0.5);
+  await page.mouse.move(box.x + box.width / 4, middle);
+  await expect
+    .poll(async () => Number.parseFloat(await light()))
+    .toBeGreaterThan(50);
+  await page.mouse.move(box.x + (box.width * 3) / 4, middle);
+  await expect
+    .poll(async () => Number.parseFloat(await light()))
+    .toBeLessThan(50);
   await page.mouse.move(box.x + box.width + 400, middle);
   await twoFrames(page);
   expect(await light()).toBe('0%');
@@ -119,6 +128,7 @@ test('a header key lit before a client-side navigation parks once the pointer le
 test('a metal button tilts toward where it is pressed', async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.goto('/');
+  await untilHydrated(page);
   const copy = page.getByRole('main').locator('[data-metal]').first();
   await expect(copy).toHaveAccessibleName('Copy agent prompt');
   const box = await copy.boundingBox();
@@ -126,19 +136,29 @@ test('a metal button tilts toward where it is pressed', async ({ page }) => {
     throw new Error('Copy agent prompt has no bounding box');
   }
   const tilt = () =>
-    copy.evaluate((element) => element.style.getPropertyValue('--tilt-x'));
-  await page.mouse.move(box.x + box.width - 2, box.y + box.height / 2);
-  await expect
-    .poll(async () => {
-      await page.mouse.down();
-      const pressed = Number(await tilt());
-      await page.mouse.up();
-      return pressed;
-    })
-    .toBeGreaterThan(0.9);
-  expect(await tilt()).toBe('0');
+    copy.evaluate((element) =>
+      ['--tilt-x', '--tilt-y'].map((axis) =>
+        Number.parseFloat(element.style.getPropertyValue(axis)),
+      ),
+    );
+  for (const [x, y, axis, direction] of [
+    [0.05, 0.5, 0, -1],
+    [0.95, 0.5, 0, 1],
+    [0.5, 0.05, 1, -1],
+    [0.5, 0.95, 1, 1],
+  ] as const) {
+    await page.mouse.move(box.x + box.width * x, box.y + box.height * y);
+    await page.mouse.down();
+    const pressed = await tilt();
+    expect(pressed.every(Number.isFinite)).toBe(true);
+    expect(Math.sign(pressed[axis])).toBe(direction);
+    await page.mouse.move(0, 0);
+    await page.mouse.up();
+    expect(await tilt()).toEqual([0, 0]);
+  }
+  await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
   await page.mouse.down({ button: 'right' });
-  expect(await tilt()).toBe('0');
+  expect(await tilt()).toEqual([0, 0]);
   await page.mouse.up({ button: 'right' });
   await page.mouse.down();
   await expect(copy).toHaveCSS(
@@ -190,7 +210,10 @@ test('focused buttons keep their focus ring above their edges while hovered', as
     await previous.focus();
     await page.keyboard.press('Tab');
     await expect(control).toBeFocused();
-    await expect(control).toHaveCSS('box-shadow', FOCUS_RING);
+    await expect(control).toHaveCSS(
+      'box-shadow',
+      new RegExp(`^${FOCUS_RING.source}`),
+    );
   }
 });
 

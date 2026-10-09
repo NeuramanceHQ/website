@@ -1,5 +1,10 @@
 import { expect, test } from '@playwright/test';
-import { ACCESS_EMAIL, blockExternal, HEADLINE } from './helpers';
+import {
+  ACCESS_EMAIL,
+  blockExternal,
+  HEADLINE,
+  untilHydrated,
+} from './helpers';
 
 const PROMPT =
   'Read https://neuramance.com/llms.txt, then draft an email to austin@neuramance.com requesting Neuramance beta access, describing the physical parts this project needs.';
@@ -268,12 +273,15 @@ test('dismissing the announcement from the keyboard hands focus to the header', 
   ).toBeFocused();
 });
 
-test('Copy agent prompt copies the exact prompt and resets within 4 seconds', async ({
+test('Copy agent prompt copies the exact prompt and resets after 2 seconds', async ({
   context,
   page,
 }) => {
   await context.grantPermissions(['clipboard-read', 'clipboard-write']);
+  await page.clock.install({ time: 0 });
   await page.goto('/');
+  await untilHydrated(page);
+  await page.clock.pauseAt(60_000);
   const copy = page.getByRole('main').locator('[data-metal]').first();
   const label = copy.getByText('Copy agent prompt', { exact: true });
   const outcome = copy.getByText('Copied', { exact: true });
@@ -289,7 +297,11 @@ test('Copy agent prompt copies the exact prompt and resets within 4 seconds', as
   expect(await page.evaluate(() => navigator.clipboard.readText())).toBe(
     PROMPT,
   );
-  await expect(outcome).toHaveCount(0, { timeout: 4000 });
+  await page.clock.runFor(1999);
+  await expect(outcome).toBeVisible();
+  await expect(announcer).toHaveText('Copied');
+  await page.clock.runFor(1);
+  await expect(outcome).toHaveCount(0);
   await expect(label).toHaveCSS('opacity', '1');
   await expect(announcer).toHaveText('');
 });
@@ -339,6 +351,18 @@ test('home page publishes Neuramance metadata', async ({ page }) => {
 test('the quote names its button and plays /audio/dune1-intro.mp3', async ({
   page,
 }) => {
+  await page.addInitScript(() => {
+    window.Audio = new Proxy(Audio, {
+      construct(target, args) {
+        const audio = Reflect.construct(target, args) as HTMLAudioElement;
+        audio.addEventListener('playing', () => {
+          audio.dataset.playing = 'true';
+        });
+        Object.defineProperty(window, 'quoteAudio', { value: audio });
+        return audio;
+      },
+    });
+  });
   await page.goto('/');
   const quote = page.getByRole('contentinfo').getByRole('button', {
     name: "A company's excellence is conveyed in everything it does.",
@@ -351,4 +375,16 @@ test('the quote names its button and plays /audio/dune1-intro.mp3', async ({
   );
   await quote.click();
   expect([200, 206]).toContain((await audio).status());
+  await expect
+    .poll(() =>
+      page.evaluate(() => {
+        const player = Reflect.get(window, 'quoteAudio') as HTMLAudioElement;
+        return {
+          playing: player.dataset.playing,
+          paused: player.paused,
+          advanced: player.currentTime > 0,
+        };
+      }),
+    )
+    .toEqual({ playing: 'true', paused: false, advanced: true });
 });

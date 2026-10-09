@@ -120,7 +120,7 @@ it('keeps downloading a slow track for as long as data keeps arriving', async ()
 });
 
 it.each(Object.entries(BROWSER_ABORTS))(
-  'abandons a download that stops delivering data, retrying twice, when the browser reports the abort as %s',
+  'abandons a download that stops delivering data for 15 seconds, retrying after 1 and 2 seconds, when the browser reports the abort as %s',
   async (_browser, aborted) => {
     vi.useFakeTimers();
     const fetch = vi.fn(
@@ -128,10 +128,35 @@ it.each(Object.entries(BROWSER_ABORTS))(
         new Response(trickle(9, 20_000, init.signal, aborted)),
     );
     vi.stubGlobal('fetch', fetch);
-    const failure = fetchTrack().catch((error: unknown) => error);
-    await vi.advanceTimersByTimeAsync(15_000 + 1_000 + 15_000 + 2_000 + 14_999);
-    expect(fetch).toHaveBeenCalledTimes(3);
+    const settled = vi.fn();
+    const failure = fetchTrack()
+      .finally(settled)
+      .catch((error: unknown) => error);
+    for (const [milliseconds, signals] of [
+      [14_999, [false]],
+      [1, [true]],
+      [999, [true]],
+      [1, [true, false]],
+      [14_999, [true, false]],
+      [1, [true, true]],
+      [1_999, [true, true]],
+      [1, [true, true, false]],
+      [14_999, [true, true, false]],
+    ] as const) {
+      await vi.advanceTimersByTimeAsync(milliseconds);
+      expect(fetch.mock.calls.map(([, init]) => init.signal?.aborted)).toEqual(
+        signals,
+      );
+      expect(settled).not.toHaveBeenCalled();
+    }
     await vi.advanceTimersByTimeAsync(1);
+    expect(fetch.mock.calls.map(([, init]) => init.signal?.aborted)).toEqual([
+      true,
+      true,
+      true,
+    ]);
+    expect(fetch).toHaveBeenCalledTimes(3);
+    expect(settled).toHaveBeenCalledOnce();
     const error = await failure;
     expect(error).toBeInstanceOf(DOMException);
     expect(error instanceof DOMException && error.name).toBe('TimeoutError');

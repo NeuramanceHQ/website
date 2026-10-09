@@ -3,6 +3,7 @@ set -euo pipefail
 
 site=/srv/neuramance
 repo=$(cd "$(dirname "$0")/.." && pwd)
+export NEXT_TELEMETRY_DISABLED=1
 
 exec 9>"$site/deploy.lock"
 flock --nonblock 9 || exit 0
@@ -20,19 +21,18 @@ fail() {
     exit 1
 }
 
-timeout 60 git -C "$repo" fetch --quiet origin main
-sha=$(git -C "$repo" rev-parse refs/remotes/origin/main)
-git -C "$repo" checkout --quiet --detach "$sha"
+sha=$(timeout 30 gh api repos/NeuramanceHQ/site/git/ref/heads/main --jq .object.sha)
+[[ $sha =~ ^[0-9a-f]{40}$ ]] || { echo "GitHub returned an invalid main sha: $sha" >&2; exit 1; }
 [ "$(readlink "$site/current" || true)" = "releases/$sha" ] && exit 0
-if [ "$(cat "$site/failed" 2>/dev/null || true)" = "$sha" ]; then
-    echo "$sha failed before; delete $site/failed to retry it"
-    exit 0
-fi
-if ! git -C "$repo" show "$sha:Caddyfile" | cmp -s - /etc/caddy/neuramance.caddy; then
-    echo "$sha: Caddyfile differs from /etc/caddy/neuramance.caddy; install it with sudo" >&2
-    [ "$(cat "$site/waiting" 2>/dev/null || true)" = "$sha" ] \
-        || report pending "Waiting for the new Caddyfile to be installed with sudo"
-    echo "$sha" > "$site/waiting"
+[ "$(cat "$site/failed" 2>/dev/null || true)" = "$sha" ] && exit 0
+timeout 30 git -C "$repo" cat-file -e "$sha^{commit}" 2>/dev/null || timeout 60 git -C "$repo" fetch --quiet origin main
+timeout 60 git -C "$repo" checkout --quiet --detach "$sha"
+if ! timeout 30 git -C "$repo" show "$sha:Caddyfile" | cmp -s - /etc/caddy/neuramance.caddy; then
+    if [ "$(cat "$site/waiting" 2>/dev/null || true)" != "$sha" ]; then
+        echo "$sha: Caddyfile differs from /etc/caddy/neuramance.caddy; install it with sudo" >&2
+        report pending "Waiting for the new Caddyfile to be installed with sudo"
+        echo "$sha" > "$site/waiting"
+    fi
     exit 0
 fi
 
@@ -40,7 +40,7 @@ if [ ! -d "$site/releases/$sha" ]; then
     build=$(mktemp -d "$site/build.XXXXXX")
     trap 'rm -rf "$build"' EXIT
     report pending "Building on i9"
-    git -C "$repo" archive "$sha" | tar -x -C "$build"
+    timeout 120 git -C "$repo" archive "$sha" | tar -x -C "$build" || fail "could not extract the commit"
     (cd "$build" && timeout 300 bun install --frozen-lockfile </dev/null && timeout 900 bun run build </dev/null) \
         || fail "build failed"
     mkdir -p "$site/releases"

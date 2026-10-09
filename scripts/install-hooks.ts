@@ -33,7 +33,11 @@ function install(): string | undefined {
   const hooks = join(git('rev-parse', '--git-common-dir').output, 'hooks');
   const existing = existsSync(hooks)
     ? readdirSync(hooks, { withFileTypes: true })
-        .filter((entry) => entry.isFile() && !entry.name.endsWith('.sample'))
+        .filter(
+          (entry) =>
+            (entry.isFile() || entry.isSymbolicLink()) &&
+            !entry.name.endsWith('.sample'),
+        )
         .map((entry) => join(hooks, entry.name))
     : [];
   const blocked = conflict(

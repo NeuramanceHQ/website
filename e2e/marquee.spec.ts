@@ -49,9 +49,13 @@ test('facts marquee loops two equal copies endlessly and pauses on demand', asyn
     await expect(list).toHaveCSS('animation-play-state', 'paused');
   }
 
+  const paused = await Promise.all((await lists.all()).map(translateX));
   await toggle.click();
   await expect(toggle).toHaveAttribute('aria-pressed', 'false');
-  await expect(lists.first()).toHaveCSS('animation-play-state', 'running');
+  for (const [index, list] of (await lists.all()).entries()) {
+    await expect(list).toHaveCSS('animation-play-state', 'running');
+    await expect.poll(() => translateX(list)).toBeLessThan(paused[index]);
+  }
 });
 
 test('facts marquee stands still and scrolls by hand under reduced motion', async ({

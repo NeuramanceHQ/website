@@ -3,7 +3,7 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
-    "start": "SITE_ADDRESS=http://127.0.0.1:3100 WWW_ADDRESS=http://www.neuramance.com:3100 SITE_ROOT=out caddy run --adapter caddyfile --config Caddyfile.local",
+    "start": "SITE_ADDRESS=http://127.0.0.1:${SITE_PORT:-3100} WWW_ADDRESS=http://www.neuramance.com:${SITE_PORT:-3100} SITE_ROOT=out caddy run --adapter caddyfile --config Caddyfile.local",
     "lint": "oxlint --disable-nested-config --no-ignore",
     "lint:shell": "sh scripts/lint-shell",
     "format": "oxfmt --disable-nested-config --ignore-path=.gitignore",

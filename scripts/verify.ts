@@ -9,6 +9,7 @@ import { setTimeout as sleep } from 'node:timers/promises';
 export type Check = {
   name: string;
   command: readonly [string, ...string[]];
+  after?: readonly Check[];
 };
 
 export type Outcome = {
@@ -27,13 +28,16 @@ const STOP_GRACE_MS = 1_000;
 const GIT_TIMEOUT_MS = 10_000;
 const LOCK_POLL_MS = 100;
 const SQLITE_BUSY = 5;
-const EDIT_BUDGET_MS = 20_000;
+const EDIT_BUDGET_MS = 15_000;
 const TURN_BUDGET_MS = 240_000;
 
 export const script = (name: string): Check => ({
   name,
   command: ['bun', 'run', '--silent', name],
 });
+
+const typecheck = script('typecheck');
+const lint: Check = { ...script('lint'), after: [typecheck] };
 
 export const EDIT_CHECKS: readonly Check[] = [
   {
@@ -44,8 +48,8 @@ export const EDIT_CHECKS: readonly Check[] = [
       'git grep -nE --text --untracked "(o[x]lint|e[s]lint)-(disable|enable)" -- "*.[jt]s" "*.[jt]sx" "*.[cm][jt]s"; test $? -eq 1',
     ],
   },
-  script('typecheck'),
-  script('lint'),
+  typecheck,
+  lint,
   script('lint:shell'),
   script('format:check'),
 ];
@@ -53,7 +57,13 @@ export const EDIT_CHECKS: readonly Check[] = [
 export const TURN_CHECKS: readonly Check[] = [
   ...EDIT_CHECKS,
   script('test'),
-  script('build'),
+  { ...script('build'), after: [lint] },
+];
+
+export const PUSH_CHECKS: readonly Check[] = [
+  ...EDIT_CHECKS,
+  script('test'),
+  { ...script('test:e2e'), after: [lint] },
 ];
 
 function signalGroup(pid: number | undefined, signal: NodeJS.Signals): void {
@@ -76,7 +86,10 @@ export function checkEnvironment(): NodeJS.ProcessEnv {
     encoding: 'utf8',
     timeout: GIT_TIMEOUT_MS,
   });
-  const env = { ...process.env };
+  const env: NodeJS.ProcessEnv = {
+    ...process.env,
+    NEXT_TELEMETRY_DISABLED: '1',
+  };
   for (const name of (local.stdout ?? '').split('\n')) {
     delete env[name];
   }
@@ -102,7 +115,7 @@ export function runCheck(
     let timedOut = false;
     const timer = setTimeout(() => {
       timedOut = true;
-      signalGroup(child.pid, 'SIGTERM');
+      signalGroup(child.pid, 'SIGINT');
       setTimeout(() => signalGroup(child.pid, 'SIGKILL'), STOP_GRACE_MS);
     }, timeoutMs);
     const finish = (
@@ -212,12 +225,25 @@ const failed = (stderr: string): Report => ({
   stderr,
 });
 
+function requireEarlierPrerequisites(checks: readonly Check[]): void {
+  checks.forEach((check, index) => {
+    for (const prerequisite of check.after ?? []) {
+      if (!checks.slice(0, index).includes(prerequisite)) {
+        throw new Error(
+          `${check.name} requires ${prerequisite.name} earlier in the list`,
+        );
+      }
+    }
+  });
+}
+
 export async function verify(
   root: string,
   checks: readonly Check[],
   deadline: number,
   running: Set<number>,
 ): Promise<Report> {
+  requireEarlierPrerequisites(checks);
   const started = performance.now();
   const env = checkEnvironment();
   const path = lockPath(root, env);
@@ -230,18 +256,31 @@ export async function verify(
       `FAIL [lock] another verification of ${root} still held ${path} at the deadline\n`,
     );
   }
-  const outcomes: Outcome[] = [];
-  const late: string[] = [];
-  for (const check of checks) {
-    const remaining = deadline - Date.now();
-    if (remaining <= 0) {
-      late.push(check.name);
-      continue;
+  const pending = new Map<Check, Promise<Outcome | undefined>>();
+  let outcomes: (Outcome | undefined)[];
+  try {
+    for (const check of checks) {
+      const prerequisites = (check.after ?? []).map((item) =>
+        pending.get(item)!,
+      );
+      pending.set(
+        check,
+        Promise.all(prerequisites).then(() => {
+          const remaining = deadline - Date.now();
+          if (remaining <= 0) return undefined;
+          return runCheck(check, root, env, remaining, running);
+        }),
+      );
     }
-    outcomes.push(await runCheck(check, root, env, remaining, running));
+    outcomes = await Promise.all(checks.map((check) => pending.get(check)!));
+  } finally {
+    lock.close();
   }
-  lock.close();
+  const late = checks
+    .filter((_, index) => outcomes[index] === undefined)
+    .map(({ name }) => name);
   const reports = outcomes
+    .filter((outcome) => outcome !== undefined)
     .filter(({ status, timedOut }) => status !== 0 || timedOut)
     .map((failure) => `${failureReport(failure, saveLog)}\n`);
   if (late.length > 0) {
@@ -267,7 +306,7 @@ export async function main(
   for (const signal of ['SIGINT', 'SIGTERM', 'SIGHUP'] as const) {
     process.on(signal, () => {
       const groups = [...running];
-      for (const pid of groups) signalGroup(pid, 'SIGTERM');
+      for (const pid of groups) signalGroup(pid, 'SIGINT');
       Atomics.wait(
         new Int32Array(new SharedArrayBuffer(4)),
         0,

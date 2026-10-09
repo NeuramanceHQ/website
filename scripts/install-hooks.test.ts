@@ -1,5 +1,11 @@
 import { execFileSync, spawnSync } from 'node:child_process';
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import {
+  mkdirSync,
+  mkdtempSync,
+  rmSync,
+  symlinkSync,
+  writeFileSync,
+} from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { afterEach, beforeEach, expect, it } from 'vitest';
@@ -49,6 +55,7 @@ const isolated = (): NodeJS.ProcessEnv => ({
   ...process.env,
   GIT_CONFIG_GLOBAL: globalConfig,
   GIT_CONFIG_NOSYSTEM: '1',
+  GIT_CEILING_DIRECTORIES: resolve(directory, '..'),
 });
 
 function git(cwd: string, ...args: string[]): string {
@@ -136,5 +143,17 @@ it('explains that nothing is installed outside a Git checkout', () => {
     status: 0,
     stderr:
       'install-hooks: not the root of a Git checkout, so the pre-push hook is not installed\n',
+  });
+});
+
+it('refuses to disable a symlinked pre-push hook', () => {
+  const root = repository();
+  const target = join(directory, 'shared-pre-push');
+  writeFileSync(target, '#!/bin/sh\nexit 0\n', { mode: 0o755 });
+  symlinkSync(target, join(root, '.git/hooks/pre-push'));
+  expect(install(root)).toEqual({
+    status: 0,
+    stderr: `install-hooks: setting core.hooksPath would stop .git/hooks/pre-push from running; call .githooks/pre-push from them to verify before each push\n`,
+    hooksPath: '',
   });
 });

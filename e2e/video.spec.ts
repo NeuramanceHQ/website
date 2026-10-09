@@ -101,6 +101,9 @@ test('background video reveals 3.5 s after playback starts, muted and without ca
     })),
   ).toEqual({ opacity: '0', fading: 0 });
   await page.clock.runFor(1);
+  await player.evaluate((element) => {
+    for (const animation of element.getAnimations()) animation.finish();
+  });
   await expect(player).toHaveCSS('opacity', '1');
   expect(
     await page.evaluate(() => ({
@@ -121,7 +124,10 @@ test('background video reveals 3.5 s after playback starts, muted and without ca
     calls: ['mute', 'playVideo', 'unloadModule:captions'],
   });
   await setPlayerState(page, 2);
-  await expect(player).toHaveCSS('opacity', '0', { timeout: 2000 });
+  await player.evaluate((element) => {
+    for (const animation of element.getAnimations()) animation.finish();
+  });
+  await expect(player).toHaveCSS('opacity', '0');
 });
 
 for (const [width, height] of [

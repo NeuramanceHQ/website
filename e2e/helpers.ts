@@ -8,7 +8,7 @@ export const blockExternal = async ({
   baseURL: string | undefined;
 }) => {
   if (baseURL === undefined) {
-    throw new Error('playwright.config.ts must set use.baseURL');
+    throw new Error('Playwright must set use.baseURL');
   }
   const { origin } = new URL(baseURL);
   await page.route(

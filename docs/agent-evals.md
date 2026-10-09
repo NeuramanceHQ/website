@@ -80,7 +80,7 @@ site-evals/
 ### Repo-specific pitfalls
 
 - **Hooks are part of the system under test.** Claude Code's global hook (`~/.claude/agent-gate.sh`) runs the clone's own `scripts/agent-verify`, exactly as in real work. Codex records hook trust per absolute path (`hooks.state."<path>/.codex/hooks.json:post_tool_use:0:0"` in `~/.codex/config.toml`), so a clone at a new path silently runs no project hook. Reuse fixed slot paths, trust each one once in Codex's `/hooks`, and record which hooks ran.
-- **Port 3100 is fixed.** `bun run start`, Playwright, and an agent's own `bun run test:e2e` all bind it. Run slots one at a time at first. To grade in parallel later, serve each slot's `out/` on its own port (`SITE_ADDRESS=http://127.0.0.1:<port> WWW_ADDRESS=http://www.neuramance.com:<port> SITE_ROOT=out caddy run --adapter caddyfile --config Caddyfile.local`) and point a harness Playwright config at it.
+- **Slots can grade in parallel.** Each `bun run test:e2e` serves `out/` on a free port, so slots, and an agent's own e2e runs inside them, never share one; set `SITE_PORT` only to pin a port.
 - **The machine is shared.** Other sessions have pushed i9's load average above 90, which multiplies wall times. Record `uptime` with each run, and prefer token and turn counts to timings.
 
 ### Validate the harness before trusting it

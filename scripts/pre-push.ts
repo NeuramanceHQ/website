@@ -1,7 +1,7 @@
 #!/usr/bin/env bun
 import { spawnSync } from 'node:child_process';
 import { readFileSync } from 'node:fs';
-import { EDIT_CHECKS, main, script } from './verify';
+import { main, PUSH_CHECKS } from './verify';
 
 const ZERO_SHA = '0'.repeat(40);
 const PUSH_BUDGET_MS = 600_000;
@@ -33,10 +33,7 @@ if (import.meta.main) {
       ? 'cannot read HEAD'
       : refusal(readFileSync(0, 'utf8'), head);
   if (problem === undefined) {
-    await main(
-      [...EDIT_CHECKS, script('test'), script('test:e2e')],
-      PUSH_BUDGET_MS,
-    );
+    await main(PUSH_CHECKS, PUSH_BUDGET_MS);
   } else {
     process.stderr.write(`pre-push: ${problem}\n`);
     process.exitCode = 1;

@@ -1,80 +1,183 @@
 #!/usr/bin/env bun
-import { spawnSync } from 'node:child_process';
-import { existsSync, readFileSync, realpathSync } from 'node:fs';
-import { isAbsolute, relative, resolve, sep } from 'node:path';
+import { spawnSync, type SpawnSyncReturns } from 'node:child_process';
+import { lstatSync, readFileSync, readlinkSync, realpathSync } from 'node:fs';
+import { isAbsolute, resolve, sep } from 'node:path';
 
 const GATE_TIMEOUT_MS = 25_000;
-const PATCHED_FILE = /^\*\*\* (?:Add File|Update File|Move to): (.+)$/gm;
+const PATCHED_FILE =
+  /^\*\*\* (?:Add File|Update File|Delete File|Move to): (.+)$/gm;
 
-type Reply = { exitCode: 0 | 2; stderr: string };
+type Reply = { exitCode: 0 | 2; stdout: string; stderr: string };
 
-function parse(input: string): { cwd: string; patch: string } | undefined {
-  try {
-    const event: unknown = JSON.parse(input);
-    if (typeof event !== 'object' || event === null) {
-      return undefined;
+function isObject(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+function parse(input: string): { cwd: string; patch: string } {
+  const event: unknown = JSON.parse(input);
+  if (!isObject(event)) {
+    throw new Error('expected a JSON object');
+  }
+  const {
+    hook_event_name: name,
+    tool_name: tool,
+    cwd,
+    tool_input: toolInput,
+  } = event;
+  if (name !== 'PostToolUse') {
+    throw new Error('hook_event_name must be PostToolUse');
+  }
+  if (tool !== 'apply_patch') {
+    throw new Error('tool_name must be apply_patch');
+  }
+  if (typeof cwd !== 'string' || !isAbsolute(cwd)) {
+    throw new Error('cwd must be an absolute path');
+  }
+  const patch = isObject(toolInput) ? toolInput.command : undefined;
+  if (typeof patch !== 'string') {
+    throw new Error('tool_input.command must be a string');
+  }
+  return { cwd, patch };
+}
+
+function location(path: string): { path: string; directory: string } {
+  const parts = path.split(sep);
+  let canonical: string = sep;
+  let directory: string = sep;
+  let links = 0;
+  for (;;) {
+    const part = parts.shift();
+    if (part === undefined) return { path: canonical, directory };
+    const candidate = resolve(canonical, part);
+    const entry = lstatSync(candidate, { throwIfNoEntry: false });
+    if (entry?.isSymbolicLink()) {
+      if (++links > 40) throw new Error(`too many symlinks resolving ${path}`);
+      const target = readlinkSync(candidate);
+      if (isAbsolute(target)) {
+        canonical = sep;
+        directory = sep;
+      }
+      parts.unshift(...target.split(sep));
+      continue;
     }
-    const { cwd, tool_input: toolInput } = event as Record<string, unknown>;
-    const patch =
-      typeof toolInput === 'object' && toolInput !== null
-        ? (toolInput as Record<string, unknown>).command
-        : undefined;
-    return typeof cwd === 'string' && typeof patch === 'string'
-      ? { cwd, patch }
-      : undefined;
-  } catch (error) {
-    if (error instanceof SyntaxError) {
-      return undefined;
-    }
-    throw error;
+    canonical = candidate;
+    if (entry?.isDirectory()) directory = canonical;
   }
 }
 
-function inside(root: string, path: string): boolean {
-  const inner = relative(root, path);
-  return inner !== '' && !inner.startsWith(`..${sep}`) && !isAbsolute(inner);
+function remaining(deadline: number): number {
+  const timeout = deadline - Date.now();
+  if (timeout <= 0) throw new Error('timed out: hook budget exhausted');
+  return timeout;
 }
 
-function patchedFiles(root: string, cwd: string, patch: string) {
-  const top = realpathSync(root);
-  return [...patch.matchAll(PATCHED_FILE)]
-    .map(([, path]) => resolve(cwd, path?.trim() ?? ''))
-    .filter((path) => existsSync(path) && inside(top, realpathSync(path)));
+function failure(result: SpawnSyncReturns<string>): string | undefined {
+  if (result.error !== undefined) {
+    return 'code' in result.error && result.error.code === 'ETIMEDOUT'
+      ? 'timed out'
+      : `could not start: ${result.error.message}`;
+  }
+  if (result.signal !== null) return `killed by ${result.signal}`;
+  return result.status === 0 ? undefined : `exited ${String(result.status)}`;
 }
 
-function handle(root: string, input: string): Reply {
-  const event = parse(input);
-  if (event === undefined) {
-    return {
-      exitCode: 2,
-      stderr:
-        'codex-hook: expected a PostToolUse event with cwd and tool_input.command\n',
-    };
-  }
-  const files = patchedFiles(root, event.cwd, event.patch);
-  if (files.length === 0) {
-    return { exitCode: 0, stderr: '' };
-  }
-  const gate = spawnSync(resolve(root, 'scripts/agent-verify'), files, {
-    cwd: root,
+function repository(directory: string, deadline: number): string | undefined {
+  const result = spawnSync('git', ['rev-parse', '--show-toplevel'], {
+    cwd: directory,
+    env: { ...process.env, LC_ALL: 'C' },
     encoding: 'utf8',
-    timeout: GATE_TIMEOUT_MS,
+    timeout: remaining(deadline),
+    killSignal: 'SIGKILL',
   });
-  if (gate.status === 0) {
-    return { exitCode: 0, stderr: '' };
+  if (result.status === 128 && result.stderr.includes('not a git repository')) {
+    return undefined;
   }
-  const output = `${gate.stdout ?? ''}${gate.stderr ?? ''}`;
+  const reason = failure(result);
+  if (reason !== undefined) {
+    throw new Error(
+      `Git discovery in ${directory} ${reason}\n${result.stderr ?? ''}`,
+    );
+  }
+  return realpathSync(result.stdout.replace(/\n$/, ''));
+}
+
+function changedRepositories(
+  paths: string[],
+  deadline: number,
+  notices: string[],
+): Map<string, string[]> {
+  const repositories = new Map<string, string[]>();
+  for (const path of paths) {
+    const target = location(path);
+    const root = repository(target.directory, deadline);
+    if (root === undefined) {
+      notices.push(`Skipped ${path}: outside any Git repository`);
+      continue;
+    }
+    const files = repositories.get(root) ?? [];
+    files.push(target.path);
+    repositories.set(root, files);
+  }
+  return repositories;
+}
+
+function verify(root: string, paths: string[], deadline: number): string {
+  try {
+    const gate = spawnSync(resolve(root, 'scripts/agent-verify'), paths, {
+      cwd: root,
+      encoding: 'utf8',
+      timeout: remaining(deadline),
+      killSignal: 'SIGINT',
+    });
+    const reason = failure(gate);
+    return reason === undefined
+      ? ''
+      : `agent-verify failed in ${root}: ${reason}\n${gate.stdout ?? ''}${gate.stderr ?? ''}`;
+  } catch (error) {
+    return `agent-verify failed in ${root}: ${String(error)}\n`;
+  }
+}
+
+export function handle(input: string, deadline: number): Reply {
+  const notices: string[] = [];
+  let stderr = '';
+  try {
+    const { cwd, patch } = parse(input);
+    const paths = [...patch.matchAll(PATCHED_FILE)].map((match) =>
+      isAbsolute(match[1]) ? match[1] : `${cwd}/${match[1]}`,
+    );
+    const fallback = paths.length === 0;
+    if (fallback) paths.push(cwd);
+    const repositories = changedRepositories(paths, deadline, notices);
+    for (const [root, paths] of repositories) {
+      if (
+        lstatSync(resolve(root, 'scripts/agent-verify'), {
+          throwIfNoEntry: false,
+        }) === undefined
+      ) {
+        notices.push(`Skipped ${root}: no scripts/agent-verify`);
+        continue;
+      }
+      stderr += verify(root, paths, deadline);
+      if (fallback) notices.push(`Focused fallback in ${root} for ${cwd}`);
+    }
+  } catch (error) {
+    stderr += `codex-hook: ${String(error)}\n`;
+  }
   return {
-    exitCode: 2,
-    stderr: `agent-verify failed after apply_patch; fix these:\n${output || `agent-verify did not finish: ${String(gate.error)}\n`}`,
+    exitCode: stderr === '' ? 0 : 2,
+    stdout:
+      notices.length === 0
+        ? ''
+        : `${JSON.stringify({ systemMessage: notices.join('\n') })}\n`,
+    stderr,
   };
 }
 
 if (import.meta.main) {
-  const reply = handle(
-    resolve(import.meta.dirname, '..'),
-    readFileSync(0, 'utf8'),
-  );
+  const deadline = Date.now() + GATE_TIMEOUT_MS;
+  const reply = handle(readFileSync(0, 'utf8'), deadline);
+  process.stdout.write(reply.stdout);
   process.stderr.write(reply.stderr);
   process.exitCode = reply.exitCode;
 }
