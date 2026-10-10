@@ -29,7 +29,9 @@ if (import.meta.main) {
       readFileSync(0, 'utf8'),
       gitOutput(['rev-parse', 'HEAD']),
     );
-    if (problem !== undefined) throw new Error(problem);
+    if (problem !== undefined) {
+      throw new Error(problem);
+    }
     await main(PUSH_CHECKS, PUSH_BUDGET_MS);
   } catch (error) {
     process.stderr.write(

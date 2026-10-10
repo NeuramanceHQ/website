@@ -42,7 +42,9 @@ function readChoice() {
   try {
     return localStorage.getItem(STORAGE_KEY);
   } catch (error) {
-    if (error instanceof DOMException) return null;
+    if (error instanceof DOMException) {
+      return null;
+    }
     throw error;
   }
 }
@@ -51,7 +53,9 @@ function saveChoice(on: boolean) {
   try {
     localStorage.setItem(STORAGE_KEY, on ? 'on' : 'off');
   } catch (error) {
-    if (!(error instanceof DOMException)) throw error;
+    if (!(error instanceof DOMException)) {
+      throw error;
+    }
   }
 }
 
@@ -62,7 +66,9 @@ function getWanted() {
 
 function setWanted(on: boolean) {
   wanted = on;
-  for (const listener of listeners) listener();
+  for (const listener of listeners) {
+    listener();
+  }
 }
 
 function subscribe(listener: () => void) {
@@ -112,7 +118,9 @@ async function download() {
       priority: 'low',
       signal: controller.signal,
     });
-    if (!response.ok) throw new HttpError(response.status);
+    if (!response.ok) {
+      throw new HttpError(response.status);
+    }
     const watched = response.body?.pipeThrough(
       new TransformStream({
         transform(chunk, stream) {
@@ -134,7 +142,9 @@ export async function fetchTrack() {
     try {
       return await download();
     } catch (error) {
-      if (!transient(error) || attempt === LOAD_ATTEMPTS) throw error;
+      if (!transient(error) || attempt === LOAD_ATTEMPTS) {
+        throw error;
+      }
     }
     await new Promise((resolve) =>
       setTimeout(resolve, RETRY_DELAY_MS * 2 ** (attempt - 1)),
@@ -160,7 +170,9 @@ async function loadTrack(context: AudioContext) {
 }
 
 function ensureEngine() {
-  if (engine) return engine;
+  if (engine) {
+    return engine;
+  }
   const context = new AudioContext({ latencyHint: 'playback' });
   const master = context.createGain();
   master.gain.value = 0;
@@ -172,7 +184,9 @@ function ensureEngine() {
     ) {
       return;
     }
-    if (audible()) void context.resume();
+    if (audible()) {
+      void context.resume();
+    }
   };
   for (const type of UNLOCK_EVENTS) {
     addEventListener(type, unlock, { capture: true, passive: true });
@@ -190,23 +204,31 @@ function rampTo({ context, master }: Engine, level: number) {
 }
 
 function pause(current: Engine) {
-  if (current.context.state !== 'running' || current.suspendTimer) return;
+  if (current.context.state !== 'running' || current.suspendTimer) {
+    return;
+  }
   rampTo(current, 0);
   current.suspendTimer = window.setTimeout(() => {
     current.suspendTimer = 0;
-    if (!audible()) void current.context.suspend();
+    if (!audible()) {
+      void current.context.suspend();
+    }
   }, RAMP_SECONDS * 1000);
 }
 
 async function sync() {
   if (!audible()) {
-    if (engine) pause(engine);
+    if (engine) {
+      pause(engine);
+    }
     return;
   }
   const current = ensureEngine();
   window.clearTimeout(current.suspendTimer);
   current.suspendTimer = 0;
-  if (resumable(current.context)) void current.context.resume();
+  if (resumable(current.context)) {
+    void current.context.resume();
+  }
   current.buffer ??= loadTrack(current.context);
   const buffer = await current.buffer;
   if (!buffer) {
@@ -215,7 +237,9 @@ async function sync() {
     pause(current);
     return;
   }
-  if (current.context.state !== 'running' || !audible()) return;
+  if (current.context.state !== 'running' || !audible()) {
+    return;
+  }
   if (!current.source) {
     const source = current.context.createBufferSource();
     source.buffer = buffer;

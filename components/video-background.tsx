@@ -60,7 +60,9 @@ export function VideoBackground({ videoId }: { videoId: string }) {
 
   useEffect(() => {
     const element = container.current;
-    if (!motionOk || !element) return;
+    if (!motionOk || !element) {
+      return;
+    }
     let player: Player | undefined;
     let ready: Player | undefined;
     let reveal: ReturnType<typeof setTimeout> | undefined;
@@ -68,7 +70,9 @@ export function VideoBackground({ videoId }: { videoId: string }) {
       document.hidden ? ready?.pauseVideo() : ready?.playVideo();
     const create = () => {
       const YouTubePlayer = window.YT?.Player;
-      if (!YouTubePlayer) return;
+      if (!YouTubePlayer) {
+        return;
+      }
       const host = document.createElement('div');
       element.replaceChildren(host);
       player = new YouTubePlayer(host, {
@@ -105,8 +109,11 @@ export function VideoBackground({ videoId }: { videoId: string }) {
         },
       });
     };
-    if (window.YT?.Player) create();
-    else window.onYouTubeIframeAPIReady = create;
+    if (window.YT?.Player) {
+      create();
+    } else {
+      window.onYouTubeIframeAPIReady = create;
+    }
     document.addEventListener('visibilitychange', followTab);
     return () => {
       document.removeEventListener('visibilitychange', followTab);

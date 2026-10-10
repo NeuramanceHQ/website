@@ -75,7 +75,9 @@ function glintOnView() {
     { threshold: 0.6 },
   );
   for (const metal of document.querySelectorAll('[data-metal]')) {
-    if (!glinted.has(metal)) glints.observe(metal);
+    if (!glinted.has(metal)) {
+      glints.observe(metal);
+    }
   }
   return () => glints.disconnect();
 }
@@ -124,7 +126,9 @@ export function MetalLight() {
     }
     const stops = [followPointer(), glintOnView(), tiltOnPress()];
     return () => {
-      for (const stop of stops) stop();
+      for (const stop of stops) {
+        stop();
+      }
     };
   }, [pathname]);
   return null;

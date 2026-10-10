@@ -12,7 +12,9 @@ export function SoundButton({
     player ??= new Audio();
     player.src = sound;
     player.play().catch((error: unknown) => {
-      if (error instanceof DOMException && error.name === 'AbortError') return;
+      if (error instanceof DOMException && error.name === 'AbortError') {
+        return;
+      }
       reportError(error);
     });
   };

@@ -237,7 +237,9 @@ it.concurrent.for([false, true])(
       new Set(),
     );
     expect(report.exitCode, report.stderr).toBe(stale ? 1 : 0);
-    if (stale) expect(report.stderr).toContain('lockfile');
+    if (stale) {
+      expect(report.stderr).toContain('lockfile');
+    }
   },
 );
 
@@ -246,8 +248,9 @@ it.concurrent('does not install dependencies or run prepare during the lockfile 
   onTestFinished,
 }) => {
   const root = repository(onTestFinished);
-  for (const file of ['package.json', 'bun.lock'])
+  for (const file of ['package.json', 'bun.lock']) {
     copyFileSync(resolve(import.meta.dirname, '..', file), join(root, file));
+  }
   mkdirSync(join(root, 'scripts'));
   writeFileSync(
     join(root, 'scripts/install-hooks.ts'),
@@ -256,7 +259,9 @@ it.concurrent('does not install dependencies or run prepare during the lockfile 
   const before = readdirSync(root).toSorted();
   const check = EDIT_CHECKS.find(({ name }) => name === 'lockfile');
   expect(check).toBeDefined();
-  if (check === undefined) throw new Error('missing lockfile check');
+  if (check === undefined) {
+    throw new Error('missing lockfile check');
+  }
   const config = readFileSync(join(root, '.git/config'), 'utf8');
   const lock = readFileSync(join(root, 'bun.lock'), 'utf8');
   const result = await runCheck(check, root, process.env, 5_000, new Set());

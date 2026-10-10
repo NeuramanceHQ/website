@@ -23,12 +23,13 @@ it.concurrent.for([
     const root = mkdtempSync(join(tmpdir(), 'verify git '));
     onTestFinished(() => rmSync(root, { recursive: true, force: true }));
     execFileSync('git', ['init', '--quiet'], { cwd: root, timeout: 10_000 });
-    if (command !== 'missing')
+    if (command !== 'missing') {
       writeFileSync(
         join(root, 'git'),
         '#!/bin/sh\nif [ "$*" = "$FAIL_GIT_ARGS" ]; then echo "fatal: planted git failure" >&2; exit 128; fi\nexec "$REAL_GIT" "$@"\n',
         { mode: 0o755 },
       );
+    }
     const result = spawnSync(
       bun,
       [

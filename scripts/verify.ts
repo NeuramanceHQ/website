@@ -397,7 +397,9 @@ export async function verify(
         check,
         Promise.all(prerequisites).then(() => {
           const remaining = deadline - Date.now();
-          if (remaining <= 0) return undefined;
+          if (remaining <= 0) {
+            return undefined;
+          }
           return runCheck(check, root, env, remaining, running);
         }),
       );
@@ -438,14 +440,18 @@ export async function main(
   for (const signal of ['SIGINT', 'SIGTERM', 'SIGHUP'] as const) {
     process.on(signal, () => {
       const groups = [...running];
-      for (const pid of groups) signalGroup(pid, 'SIGINT');
+      for (const pid of groups) {
+        signalGroup(pid, 'SIGINT');
+      }
       Atomics.wait(
         new Int32Array(new SharedArrayBuffer(4)),
         0,
         0,
         STOP_GRACE_MS,
       );
-      for (const pid of groups) signalGroup(pid, 'SIGKILL');
+      for (const pid of groups) {
+        signalGroup(pid, 'SIGKILL');
+      }
       process.exit(128 + constants.signals[signal]);
     });
   }

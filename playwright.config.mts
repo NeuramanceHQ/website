@@ -15,10 +15,13 @@ process.env.SITE_PORT ??= await new Promise<string>((resolve, reject) => {
     const address = server.address();
     server.close((error) => {
       clearTimeout(timeout);
-      if (error) reject(error);
-      else if (address === null || typeof address === 'string') {
+      if (error) {
+        reject(error);
+      } else if (address === null || typeof address === 'string') {
         reject(new Error('Expected a localhost TCP port'));
-      } else resolve(String(address.port));
+      } else {
+        resolve(String(address.port));
+      }
     });
   });
 });

@@ -8,7 +8,9 @@ import { colors } from '@/lib/tokens.stylex';
 export function Announcement({ children }: { children: ReactNode }) {
   const [open, setOpen] = useState(true);
   const bar = useRef<HTMLElement>(null);
-  if (!open) return null;
+  if (!open) {
+    return null;
+  }
   const dismiss = () => {
     if (bar.current?.contains(document.activeElement)) {
       bar.current.nextElementSibling

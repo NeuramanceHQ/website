@@ -28,10 +28,12 @@ it.concurrent.for([
     }
     const path = join(directory, file);
     const source = readFileSync(path, 'utf8');
-    if (fault === 'directive')
+    if (fault === 'directive') {
       writeFileSync(path, source.replace('file_server', 'file_servr'));
-    if (fault === 'indentation')
+    }
+    if (fault === 'indentation') {
       writeFileSync(path, source.replace('\t', '  '));
+    }
     const result = await runCheck(
       { name: 'lint:caddy', command: ['bun', 'run', '--silent', 'lint:caddy'] },
       directory,
@@ -40,10 +42,13 @@ it.concurrent.for([
       new Set(),
     );
     expect(result.status, result.output).toBe(fault === 'unchanged' ? 0 : 1);
-    if (fault === 'directive')
+    if (fault === 'directive') {
       expect(result.output).toMatch(
         /Caddyfile:\d+: unrecognized directive: file_servr/,
       );
-    if (fault === 'indentation') expect(result.output).toMatch(/^- {3}\w/m);
+    }
+    if (fault === 'indentation') {
+      expect(result.output).toMatch(/^- {3}\w/m);
+    }
   },
 );

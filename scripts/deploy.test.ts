@@ -74,7 +74,9 @@ function run(...args: [string, ...string[]]) {
     timeout: 8_000,
     killSignal: 'SIGKILL',
   });
-  if (result.error) throw result.error;
+  if (result.error) {
+    throw result.error;
+  }
   return {
     status: result.status,
     stdout: result.stdout,

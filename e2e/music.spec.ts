@@ -73,8 +73,9 @@ const observeMusic = (page: Page) =>
         const start = source.start.bind(source);
         source.start = (...args: Parameters<typeof start>) => {
           const buffer = source.buffer;
-          if (buffer === null)
+          if (buffer === null) {
             throw new Error('Music started without a buffer');
+          }
           window.musicSamples = Array.from(
             { length: buffer.numberOfChannels },
             (_, channel) =>
@@ -248,8 +249,12 @@ test('background music decodes before a gesture and loops its crossfaded buffer 
     [-0.125, 0.5],
   ].map(([head, tail]) =>
     SAMPLE_TIMES.map((time) => {
-      if (time < 5) return expect.closeTo(head, 4);
-      if (time < 6) return expect.closeTo(tail, 4);
+      if (time < 5) {
+        return expect.closeTo(head, 4);
+      }
+      if (time < 6) {
+        return expect.closeTo(tail, 4);
+      }
       const progress = (time - 6) / 4;
       return expect.closeTo(
         tail * Math.cos((progress * Math.PI) / 2) +

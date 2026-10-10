@@ -61,11 +61,12 @@ export function repository(finished: Cleanup, behavior = ''): string {
   const root = emptyRepository(finished);
   mkdirSync(join(root, 'scripts'));
   mkdirSync(join(root, '.githooks'));
-  for (const name of ['pre-push.ts', 'verify.ts', 'scan-suppressions'])
+  for (const name of ['pre-push.ts', 'verify.ts', 'scan-suppressions']) {
     copyFileSync(
       resolve(import.meta.dirname, name),
       join(root, 'scripts', name),
     );
+  }
   symlinkSync('../scripts/pre-push.ts', join(root, '.githooks/pre-push'));
   writeFileSync(
     join(root, 'package.json'),
@@ -98,10 +99,13 @@ export function gate(
       [join(root, 'scripts/verify.ts'), ...args],
       { cwd: root, env, encoding: 'utf8', timeout: 5_000 },
       (error, stdout, stderr) => {
-        if (error === null) settle({ status: 0, stdout, stderr });
-        else if (typeof error.code === 'number')
+        if (error === null) {
+          settle({ status: 0, stdout, stderr });
+        } else if (typeof error.code === 'number') {
           settle({ status: error.code, stdout, stderr });
-        else reject(error);
+        } else {
+          reject(error);
+        }
       },
     );
   });
@@ -116,7 +120,9 @@ export function startGate(root: string, finished: Cleanup) {
   });
   finished(() => {
     child.kill('SIGKILL');
-    if (!existsSync(join(root, 'groups'))) return;
+    if (!existsSync(join(root, 'groups'))) {
+      return;
+    }
     for (const pid of readFileSync(join(root, 'groups'), 'utf8')
       .trim()
       .split(/\s+/)
@@ -127,8 +133,9 @@ export function startGate(root: string, finished: Cleanup) {
       } catch (error) {
         if (
           !(error instanceof Error && 'code' in error && error.code === 'ESRCH')
-        )
+        ) {
           throw error;
+        }
       }
     }
   });

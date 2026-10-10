@@ -109,7 +109,9 @@ it.concurrent('saves exactly the full output of a long failure', async ({
     report.stderr,
   )?.[1];
   expect(path).toBe(join(root, '.git/agent-verify-logs/long.log'));
-  if (path === undefined) throw new Error('missing log path');
+  if (path === undefined) {
+    throw new Error('missing log path');
+  }
   expect(readFileSync(path, 'utf8')).toBe(output);
   writeFileSync(join(root, 'output'), 'replacement\n'.repeat(55));
   const repeated = await verify(

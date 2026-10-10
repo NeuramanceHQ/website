@@ -6,8 +6,9 @@ const HOOKS_PATH = '.githooks';
 
 function git(...args: string[]): { status: number | null; output: string } {
   const result = spawnSync('git', args, { encoding: 'utf8', timeout: 10_000 });
-  if (result.error !== undefined)
+  if (result.error !== undefined) {
     throw new Error(`git ${args.join(' ')}: ${result.error.message}`);
+  }
   return { status: result.status, output: result.stdout.trim() };
 }
 
@@ -58,8 +59,9 @@ function install(): string | undefined {
 if (import.meta.main) {
   try {
     const problem = install();
-    if (problem !== undefined)
+    if (problem !== undefined) {
       process.stderr.write(`install-hooks: ${problem}\n`);
+    }
   } catch (error) {
     process.stderr.write(
       `install-hooks: ${error instanceof Error ? error.message : String(error)}\n`,

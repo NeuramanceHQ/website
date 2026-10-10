@@ -438,6 +438,8 @@ it('enforces each complexity ceiling at its boundary', () => {
       'complexity-11.ts': branching(11),
       'depth-3.ts': nested(3),
       'depth-4.ts': nested(4),
+      'depth-unbraced.ts':
+        'export function deep(value: number): number {\n  if (value > 0)\n    if (value > 1)\n      if (value > 2)\n        if (value > 3) return value;\n  return 0;\n}\n',
       'function-100.ts': longFunction(100),
       'function-101.ts': longFunction(101),
       'function-blank-100.ts': longFunction(99).replace('\n', '\n\n'),
@@ -455,6 +457,10 @@ it('enforces each complexity ceiling at its boundary', () => {
   ).toEqual([
     'complexity-11.ts:1 eslint(complexity)',
     'depth-4.ts:5 eslint(max-depth)',
+    'depth-unbraced.ts:3 eslint(curly)',
+    'depth-unbraced.ts:4 eslint(curly)',
+    'depth-unbraced.ts:5 eslint(curly)',
+    'depth-unbraced.ts:5 eslint(curly)',
     'file-501.ts:501 eslint(max-lines)',
     'file-blank-501.ts:501 eslint(max-lines)',
     'function-101.ts:1 eslint(max-lines-per-function)',

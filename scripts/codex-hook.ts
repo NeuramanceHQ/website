@@ -67,11 +67,15 @@ function location(path: string): { path: string; directory: string } {
   let links = 0;
   for (;;) {
     const part = parts.shift();
-    if (part === undefined) return { path: canonical, directory };
+    if (part === undefined) {
+      return { path: canonical, directory };
+    }
     const candidate = resolve(canonical, part);
     const entry = existingEntry(candidate);
     if (entry?.isSymbolicLink()) {
-      if (++links > 40) throw new Error(`too many symlinks resolving ${path}`);
+      if (++links > 40) {
+        throw new Error(`too many symlinks resolving ${path}`);
+      }
       const target = readlinkSync(candidate);
       if (isAbsolute(target)) {
         canonical = sep;
@@ -81,13 +85,17 @@ function location(path: string): { path: string; directory: string } {
       continue;
     }
     canonical = candidate;
-    if (entry?.isDirectory()) directory = canonical;
+    if (entry?.isDirectory()) {
+      directory = canonical;
+    }
   }
 }
 
 function remaining(deadline: number): number {
   const timeout = deadline - Date.now();
-  if (timeout <= 0) throw new Error('timed out: hook budget exhausted');
+  if (timeout <= 0) {
+    throw new Error('timed out: hook budget exhausted');
+  }
   return timeout;
 }
 
@@ -97,7 +105,9 @@ function failure(result: SpawnSyncReturns<string>): string | undefined {
       ? 'timed out'
       : `could not start: ${result.error.message}`;
   }
-  if (result.signal !== null) return `killed by ${result.signal}`;
+  if (result.signal !== null) {
+    return `killed by ${result.signal}`;
+  }
   return result.status === 0 ? undefined : `exited ${String(result.status)}`;
 }
 
@@ -161,10 +171,13 @@ async function verify(
       new Set(),
     );
     let reason = `exited ${gate.status}`;
-    if (gate.timedOut) reason = 'timed out';
-    else if (gate.signal !== null) reason = `killed by ${gate.signal}`;
-    else if (gate.status === null) reason = 'could not start';
-    else if (gate.status === 0) {
+    if (gate.timedOut) {
+      reason = 'timed out';
+    } else if (gate.signal !== null) {
+      reason = `killed by ${gate.signal}`;
+    } else if (gate.status === null) {
+      reason = 'could not start';
+    } else if (gate.status === 0) {
       notices.push(
         ...gate.output
           .split('\n')
@@ -193,7 +206,9 @@ export async function handle(input: string, deadline: number): Promise<Reply> {
       };
     });
     const fallback = paths.length === 0;
-    if (fallback) paths.push({ path: cwd, edited: false });
+    if (fallback) {
+      paths.push({ path: cwd, edited: false });
+    }
     const repositories = changedRepositories(paths, deadline, notices);
     for (const [root, paths] of repositories) {
       if (fallback) {
