@@ -1,6 +1,12 @@
 #!/usr/bin/env bun
 import { spawnSync, type SpawnSyncReturns } from 'node:child_process';
-import { lstatSync, readFileSync, readlinkSync, realpathSync } from 'node:fs';
+import {
+  lstatSync,
+  readFileSync,
+  readlinkSync,
+  realpathSync,
+  type Stats,
+} from 'node:fs';
 import { isAbsolute, resolve, sep } from 'node:path';
 import { runCheck } from './verify';
 
@@ -41,6 +47,19 @@ function parse(input: string): { cwd: string; patch: string } {
   return { cwd, patch };
 }
 
+function existingEntry(path: string): Stats | undefined {
+  try {
+    return lstatSync(path, { throwIfNoEntry: false });
+  } catch (error) {
+    if (
+      !(error instanceof Error && 'code' in error && error.code === 'ENOTDIR')
+    ) {
+      throw error;
+    }
+    return undefined;
+  }
+}
+
 function location(path: string): { path: string; directory: string } {
   const parts = path.split(sep);
   let canonical: string = sep;
@@ -50,7 +69,7 @@ function location(path: string): { path: string; directory: string } {
     const part = parts.shift();
     if (part === undefined) return { path: canonical, directory };
     const candidate = resolve(canonical, part);
-    const entry = lstatSync(candidate, { throwIfNoEntry: false });
+    const entry = existingEntry(candidate);
     if (entry?.isSymbolicLink()) {
       if (++links > 40) throw new Error(`too many symlinks resolving ${path}`);
       const target = readlinkSync(candidate);
@@ -116,7 +135,7 @@ function changedRepositories(
       continue;
     }
     const files = repositories.get(root) ?? [];
-    if (edited && lstatSync(target.path, { throwIfNoEntry: false })?.isFile()) {
+    if (edited && existingEntry(target.path)?.isFile()) {
       files.push(target.path);
     }
     repositories.set(root, files);
@@ -128,6 +147,7 @@ async function verify(
   root: string,
   paths: string[],
   deadline: number,
+  notices: string[],
 ): Promise<string> {
   try {
     const gate = await runCheck(
@@ -144,7 +164,14 @@ async function verify(
     if (gate.timedOut) reason = 'timed out';
     else if (gate.signal !== null) reason = `killed by ${gate.signal}`;
     else if (gate.status === null) reason = 'could not start';
-    else if (gate.status === 0) return '';
+    else if (gate.status === 0) {
+      notices.push(
+        ...gate.output
+          .split('\n')
+          .filter((line) => line.includes('not verified')),
+      );
+      return '';
+    }
     return `agent-verify failed in ${root}: ${reason}\n${gate.output}\n`;
   } catch (error) {
     return `agent-verify failed in ${root}: ${String(error)}\n`;
@@ -177,15 +204,11 @@ export async function handle(input: string, deadline: number): Promise<Reply> {
         );
         continue;
       }
-      if (
-        lstatSync(resolve(root, 'scripts/agent-verify'), {
-          throwIfNoEntry: false,
-        }) === undefined
-      ) {
+      if (existingEntry(resolve(root, 'scripts/agent-verify')) === undefined) {
         notices.push(`Skipped ${root}: no scripts/agent-verify`);
         continue;
       }
-      stderr += await verify(root, paths, deadline);
+      stderr += await verify(root, paths, deadline, notices);
     }
   } catch (error) {
     stderr += `codex-hook: ${String(error)}\n`;

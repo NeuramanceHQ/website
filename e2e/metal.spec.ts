@@ -1,5 +1,5 @@
-import { expect, test, type Locator, type Page } from '@playwright/test';
-import { blockExternal, untilHydrated } from './helpers';
+import { expect, type Locator, type Page } from '@playwright/test';
+import { test, untilHydrated } from './helpers';
 
 const FOCUS_RING =
   /rgb\(5, 5, 6\) 0px 0px 0px 2px, rgb\(245, 245, 242\) 0px 0px 0px 4px/;
@@ -29,8 +29,6 @@ const glints = (metal: Locator) =>
   metal.evaluate((element) =>
     element instanceof HTMLElement ? (element.dataset.glints ?? '0') : '',
   );
-
-test.beforeEach(blockExternal);
 
 test('the metal buttons catch the light as the pointer passes', async ({
   page,
@@ -241,6 +239,41 @@ test('every control the keyboard reaches shows the focus ring', async ({
     }
     visited.push(control);
     await expect(page.locator(':focus')).toHaveCSS('box-shadow', FOCUS_RING);
+  }
+  expect(visited.length).toBeGreaterThanOrEqual(20);
+  expect(visited.length).toBeLessThan(40);
+});
+
+test('every control the keyboard reaches shows an outline in forced colors', async ({
+  page,
+}) => {
+  await page.emulateMedia({ forcedColors: 'active' });
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto('/');
+  const focused = () =>
+    page.evaluate(() =>
+      document.activeElement === document.body
+        ? undefined
+        : document.activeElement?.outerHTML,
+    );
+  const visited: (string | undefined)[] = [];
+  while (visited.length < 40) {
+    await page.keyboard.press('Tab');
+    const control = await focused();
+    if (
+      control === undefined ||
+      control === visited[0] ||
+      control === visited.at(-1)
+    ) {
+      break;
+    }
+    visited.push(control);
+    await expect(page.locator(':focus')).toHaveCSS('outline-style', 'solid');
+    await expect(page.locator(':focus')).toHaveCSS('outline-width', '2px');
+    await expect(page.locator(':focus')).not.toHaveCSS(
+      'outline-color',
+      'rgba(0, 0, 0, 0)',
+    );
   }
   expect(visited.length).toBeGreaterThanOrEqual(20);
   expect(visited.length).toBeLessThan(40);

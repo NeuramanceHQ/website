@@ -1,4 +1,4 @@
-import { cleanup, fireEvent, render, screen } from '@testing-library/react';
+import { cleanup, render, screen } from '@testing-library/react';
 import { afterEach, expect, it } from 'vitest';
 import { Marquee } from './marquee';
 
@@ -25,14 +25,4 @@ it('exposes one labelled list and hides its looping copy from assistive tech', (
   expect(copy.textContent).toBe(list.textContent);
   expect(copy.getAttribute('aria-hidden')).toBe('true');
   expect(copy.hasAttribute('inert')).toBe(true);
-});
-
-it('toggles scrolling with a pressed-state pause button', () => {
-  renderMarquee();
-  const toggle = screen.getByRole('button', { name: 'Pause scrolling' });
-  expect(toggle.getAttribute('aria-pressed')).toBe('false');
-  fireEvent.click(toggle);
-  expect(toggle.getAttribute('aria-pressed')).toBe('true');
-  fireEvent.click(toggle);
-  expect(toggle.getAttribute('aria-pressed')).toBe('false');
 });

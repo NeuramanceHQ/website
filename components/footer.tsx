@@ -4,12 +4,14 @@ import Link from 'next/link';
 import { SoundButton } from '@/components/sound-button';
 import { frame } from '@/components/styles';
 import { REGISTERED_WORDMARK } from '@/lib/logotype';
-import { ACCESS_HREF, EMAIL } from '@/lib/site';
+import { ACCESS_HREF, EMAIL, LLMS_HREF } from '@/lib/site';
 import { colors } from '@/lib/tokens.stylex';
 
 const COLUMNS = [
   {
     title: 'Product',
+    Anchor: Link,
+    anchorProps: { prefetch: false },
     links: [
       { href: '/#how-it-works', label: 'How it works' },
       { href: '/#services', label: 'Services' },
@@ -18,10 +20,11 @@ const COLUMNS = [
   },
   {
     title: 'Company',
+    Anchor: 'a' as const,
     links: [
       { href: ACCESS_HREF, label: 'Request access' },
       { href: `mailto:${EMAIL}`, label: EMAIL },
-      { href: '/llms.txt', label: 'llms.txt' },
+      { href: LLMS_HREF, label: 'llms.txt' },
     ],
   },
 ];
@@ -57,14 +60,14 @@ export function Footer() {
           >
             <p {...stylex.props(styles.heading)}>{column.title}</p>
             {column.links.map((link) => (
-              <Link
+              <column.Anchor
                 key={link.href}
                 href={link.href}
-                prefetch={false}
+                {...column.anchorProps}
                 {...stylex.props(styles.link)}
               >
                 {link.label}
-              </Link>
+              </column.Anchor>
             ))}
           </nav>
         ))}

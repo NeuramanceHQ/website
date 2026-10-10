@@ -1,15 +1,16 @@
-import { expect, test } from '@playwright/test';
-import {
-  ACCESS_EMAIL,
-  blockExternal,
-  HEADLINE,
-  untilHydrated,
-} from './helpers';
+import { expect } from '@playwright/test';
+import { ACCESS_EMAIL, HEADLINE, test, untilHydrated } from './helpers';
 
 const PROMPT =
   'Read https://neuramance.com/llms.txt, then draft an email to austin@neuramance.com requesting Neuramance beta access, describing the physical parts this project needs.';
 
-test.beforeEach(blockExternal);
+test('the header logo is not lazy-loaded', async ({ page }) => {
+  await page.goto('/');
+  await expect(page.getByRole('banner').locator('img')).not.toHaveAttribute(
+    'loading',
+    'lazy',
+  );
+});
 
 test('home page renders its production styles', async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
@@ -333,6 +334,7 @@ test('home page publishes Neuramance metadata', async ({ page }) => {
   for (const [selector, content] of [
     ['meta[name="theme-color"]', '#050506'],
     ['meta[property="og:title"]', 'Neuramance® - Metal Parts for AI Agents'],
+    ['meta[name="twitter:title"]', 'Neuramance® - Metal Parts for AI Agents'],
     ['meta[property="og:site_name"]', 'Neuramance'],
     ['meta[property="og:url"]', 'https://neuramance.com'],
   ] as const) {

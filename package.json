@@ -6,6 +6,7 @@
     "start": "SITE_ADDRESS=http://127.0.0.1:${SITE_PORT:-3100} WWW_ADDRESS=http://www.neuramance.com:${SITE_PORT:-3100} SITE_ROOT=out caddy run --adapter caddyfile --config Caddyfile.local",
     "lint": "oxlint --disable-nested-config --no-ignore",
     "lint:shell": "sh scripts/lint-shell",
+    "lint:caddy": "caddy adapt --validate --adapter caddyfile --config Caddyfile.local >/dev/null && caddy fmt --diff Caddyfile && caddy fmt --diff Caddyfile.local",
     "format": "oxfmt --disable-nested-config --ignore-path=.gitignore",
     "format:check": "oxfmt --check --disable-nested-config --ignore-path=.gitignore",
     "typecheck": "next typegen && tsc --noEmit",
@@ -15,7 +16,7 @@
   },
   "dependencies": {
     "@stylexjs/stylex": "0.19.1",
-    "lucide-react": "1.52.0",
+    "lucide-react": "1.55.0",
     "next": "16.4.0",
     "react": "19.3.0",
     "react-dom": "19.3.0"
@@ -30,13 +31,13 @@
     "@stylexjs/postcss-plugin": "0.19.1",
     "@testing-library/dom": "10.4.2",
     "@testing-library/react": "16.3.3",
-    "@types/node": "24.19.1",
+    "@types/node": "24.19.2",
     "@types/react": "19.3.0",
     "@types/react-dom": "19.3.0",
     "jsdom": "30.1.2",
     "oxfmt": "0.72.0",
     "oxlint": "1.87.0",
-    "oxlint-tsgolint": "7.0.2003",
+    "oxlint-tsgolint": "7.0.2004",
     "typescript": "7.0.2",
     "vitest": "5.0.3"
   },

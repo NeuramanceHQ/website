@@ -1,0 +1,31 @@
+#!/bin/sh
+set -u
+root=$(git rev-parse --show-toplevel) || exit 2
+cd "$root" || exit 2
+status=0
+git grep -nE --text --untracked '(o[x]lint|e[s]lint)-(disable|enable)' -- '*.[jt]s' '*.[jt]sx' '*.[cm][jt]s'
+result=$?
+if [ "$result" -gt 1 ]; then exit "$result"; fi
+if [ "$result" -eq 0 ]; then
+    status=1
+fi
+git grep -nE --text --untracked '#[[:space:]]*s[h]ellcheck[[:space:]].*disable'
+result=$?
+if [ "$result" -gt 1 ]; then exit "$result"; fi
+if [ "$result" -eq 0 ]; then
+    printf '%s\n' 'ShellCheck checks disabled'
+    status=1
+fi
+git grep -nE --text --untracked '\.(only|skip|skipIf|runIf|todo|fails?|fixme)\b|\b(skip|only|todo|fails?)[[:space:]]*:[[:space:]]*true\b' -- '*.test.ts' '*.test.tsx' 'e2e/*.ts'
+result=$?
+if [ "$result" -gt 1 ]; then exit "$result"; fi
+if [ "$result" -eq 0 ]; then
+    printf '%s\n' 'disabled, inverted, or focused test'
+    status=1
+fi
+hidden=$(git ls-files -ci --exclude-standard) || exit 2
+if [ -n "$hidden" ]; then
+    printf '%s\n' "$hidden" | sed 's/^/tracked file hidden by an ignore rule: /'
+    status=1
+fi
+exit "$status"

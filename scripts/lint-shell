@@ -6,4 +6,4 @@ if [ "$version" != 0.11.0 ]; then
     echo "lint:shell needs ShellCheck 0.11.0, found ${version:-none}" >&2
     exit 1
 fi
-exec shellcheck "$here/deploy" "$here/lint-shell"
+exec shellcheck --norc "$here/deploy" "$here/lint-shell" "$here/scan-suppressions"

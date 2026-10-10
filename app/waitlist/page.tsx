@@ -9,7 +9,6 @@ export const metadata: Metadata = {
   robots: { index: false },
   openGraph: {
     ...OPEN_GRAPH,
-    title: 'Waitlist | Neuramance®',
     url: '/waitlist',
   },
 };

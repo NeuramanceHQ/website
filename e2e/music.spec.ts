@@ -1,5 +1,5 @@
-import { expect, test, type Page } from '@playwright/test';
-import { blockExternal, untilHydrated } from './helpers';
+import { expect, type Page } from '@playwright/test';
+import { test, untilHydrated } from './helpers';
 
 declare global {
   interface Window {
@@ -52,46 +52,16 @@ const serveMusic = async (page: Page, statuses: number[] = []) => {
   return requests;
 };
 
-const blockAutoplay = (page: Page) =>
+const observeMusic = (page: Page) =>
   page.addInitScript((times) => {
-    let gestured = false;
-    for (const type of ['pointerdown', 'keydown']) {
-      addEventListener(
-        type,
-        (event) => {
-          gestured ||= event.isTrusted;
-        },
-        { capture: true },
-      );
-    }
     window.musicContexts = [];
     window.musicLoops = [];
     window.musicDecoded = 0;
     window.musicSamples = [];
-    window.interruptMusic = async () => {
-      gestured = false;
-      await window.musicContexts.at(-1)?.suspend();
-    };
-    let interrupted = false;
-    window.interruptMusicLikeSafari = async () => {
-      interrupted = true;
-      await window.interruptMusic();
-    };
     window.AudioContext = class extends AudioContext {
       constructor(options?: AudioContextOptions) {
         super(options);
         window.musicContexts.push(this);
-        void super.suspend();
-      }
-      override get state(): AudioContextState {
-        return interrupted ? 'interrupted' : super.state;
-      }
-      override resume() {
-        if (!gestured) {
-          return Promise.resolve();
-        }
-        interrupted = false;
-        return super.resume();
       }
       override async decodeAudioData(data: ArrayBuffer) {
         const buffer = await super.decodeAudioData(data);
@@ -126,6 +96,47 @@ const blockAutoplay = (page: Page) =>
       }
     };
   }, SAMPLE_TIMES);
+
+const blockAutoplay = async (page: Page) => {
+  await observeMusic(page);
+  await page.addInitScript(() => {
+    let gestured = false;
+    for (const type of ['pointerdown', 'keydown']) {
+      addEventListener(
+        type,
+        (event) => {
+          gestured ||= event.isTrusted;
+        },
+        { capture: true },
+      );
+    }
+    window.interruptMusic = async () => {
+      gestured = false;
+      await window.musicContexts.at(-1)?.suspend();
+    };
+    let interrupted = false;
+    window.interruptMusicLikeSafari = async () => {
+      interrupted = true;
+      await window.interruptMusic();
+    };
+    window.AudioContext = class extends AudioContext {
+      constructor(options?: AudioContextOptions) {
+        super(options);
+        void super.suspend();
+      }
+      override get state(): AudioContextState {
+        return interrupted ? 'interrupted' : super.state;
+      }
+      override resume() {
+        if (!gestured) {
+          return Promise.resolve();
+        }
+        interrupted = false;
+        return super.resume();
+      }
+    };
+  });
+};
 
 const clockRetries = async (page: Page) => {
   await countMusicFetches(page);
@@ -188,7 +199,19 @@ const loops = (page: Page) => page.evaluate(() => window.musicLoops);
 const audioState = (page: Page) =>
   page.evaluate(() => window.musicContexts.at(-1)?.state);
 
-test.beforeEach(blockExternal);
+test('background music autoplays without a gesture when the browser allows it', async ({
+  page,
+}) => {
+  await observeMusic(page);
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await serveMusic(page);
+  await page.goto('/');
+  await expect(musicToggle(page)).toHaveAttribute('aria-pressed', 'true');
+  await expect
+    .poll(() => loops(page))
+    .toEqual([{ loop: true, loopStart: 4, loopEnd: expect.closeTo(10, 3) }]);
+  expect(await audioState(page)).toBe('running');
+});
 
 test('background music decodes before a gesture and loops its crossfaded buffer from 4 seconds', async ({
   page,

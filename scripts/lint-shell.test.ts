@@ -15,6 +15,11 @@ let directory = '';
 
 beforeEach(() => {
   directory = mkdtempSync(join(tmpdir(), 'lint shell '));
+  mkdirSync(join(directory, 'scripts'));
+  copyFileSync(
+    resolve(import.meta.dirname, 'scan-suppressions'),
+    join(directory, 'scripts/scan-suppressions'),
+  );
 });
 
 afterEach(() => {
@@ -33,15 +38,7 @@ function lintShell(
   return { status: result.status, output: `${result.stdout}${result.stderr}` };
 }
 
-it('passes the repository shell scripts', () => {
-  expect(lintShell(resolve(import.meta.dirname, 'lint-shell'))).toEqual({
-    status: 0,
-    output: '',
-  });
-});
-
 it('reports a ShellCheck finding in the deploy script', () => {
-  mkdirSync(join(directory, 'scripts'));
   copyFileSync(
     resolve(import.meta.dirname, 'lint-shell'),
     join(directory, 'scripts/lint-shell'),
@@ -56,7 +53,6 @@ it('reports a ShellCheck finding in the deploy script', () => {
 });
 
 it('reports a ShellCheck finding in its own script', () => {
-  mkdirSync(join(directory, 'scripts'));
   copyFileSync(
     resolve(import.meta.dirname, 'deploy'),
     join(directory, 'scripts/deploy'),
@@ -85,4 +81,38 @@ it('refuses a ShellCheck version other than the pinned one', () => {
     status: 1,
     output: 'lint:shell needs ShellCheck 0.11.0, found 0.10.0\n',
   });
+});
+
+it.each(['.shellcheckrc', 'scripts/.shellcheckrc'])(
+  'ignores disabling configuration in %s',
+  (file) => {
+    copyFileSync(
+      resolve(import.meta.dirname, 'lint-shell'),
+      join(directory, 'scripts/lint-shell'),
+    );
+    writeFileSync(
+      join(directory, 'scripts/deploy'),
+      '#!/bin/sh\nrelease=$1\nrm -r $release\n',
+    );
+    writeFileSync(join(directory, file), 'disable=SC2086\n');
+    const result = lintShell(join(directory, 'scripts/lint-shell'));
+    expect(result.status).toBe(1);
+    expect(result.output).toMatch(/deploy line 3:[\s\S]*SC2086/);
+  },
+);
+
+it('reports a ShellCheck finding in the suppression scanner', () => {
+  for (const file of ['lint-shell', 'deploy']) {
+    copyFileSync(
+      resolve(import.meta.dirname, file),
+      join(directory, 'scripts', file),
+    );
+  }
+  writeFileSync(
+    join(directory, 'scripts/scan-suppressions'),
+    '#!/bin/sh\npattern=$1\nprintf %s $pattern\n',
+  );
+  const result = lintShell(join(directory, 'scripts/lint-shell'));
+  expect(result.status).toBe(1);
+  expect(result.output).toMatch(/scan-suppressions line 3:[\s\S]*SC2086/);
 });

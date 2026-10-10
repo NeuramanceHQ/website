@@ -1,23 +1,24 @@
 import * as stylex from '@stylexjs/stylex';
 import type { Metadata, Viewport } from 'next';
 import localFont from 'next/font/local';
-import Link from 'next/link';
 import { Announcement } from '@/components/announcement';
 import { Footer } from '@/components/footer';
 import { MetalLight } from '@/components/metal-light';
 import { Nav } from '@/components/nav';
 import { VideoBackground } from '@/components/video-background';
-import { BACKGROUND_VIDEO_ID, OPEN_GRAPH } from '@/lib/site';
+import { BACKGROUND_VIDEO_ID, EMAIL, LLMS_HREF, OPEN_GRAPH } from '@/lib/site';
 import { colors, fonts } from '@/lib/tokens.stylex';
 import './globals.css';
+
+const DESCRIPTION =
+  'Neuramance lets AI agents like Claude Code and Codex quote, order, and track real metal parts and fabrication, programmatically.';
 
 export const metadata: Metadata = {
   title: {
     template: '%s | Neuramance®',
     default: 'Neuramance® - Metal Parts for AI Agents',
   },
-  description:
-    'Neuramance lets AI agents like Claude Code and Codex quote, order, and track real metal parts and fabrication, programmatically.',
+  description: DESCRIPTION,
   keywords: [
     'AI agents',
     'Claude Code',
@@ -41,13 +42,6 @@ export const metadata: Metadata = {
     ],
   },
   openGraph: OPEN_GRAPH,
-  twitter: {
-    card: 'summary_large_image',
-    title: 'Neuramance® - Metal Parts for AI Agents',
-    description:
-      'Your agent sends the CAD file; we ship the metal part. CNC machining, sheet metal, laser cutting, and finishing for Claude Code, Codex, and any AI agent.',
-    images: ['/opengraph-image.jpg'],
-  },
   robots: {
     index: true,
     follow: true,
@@ -83,14 +77,13 @@ const structuredData = {
   name: 'Neuramance',
   url: 'https://neuramance.com',
   logo: 'https://neuramance.com/logo.svg',
-  description:
-    'Neuramance lets AI agents like Claude Code and Codex quote, order, and track real metal parts and fabrication, programmatically.',
+  description: DESCRIPTION,
   foundingDate: '2025',
   sameAs: ['https://twitter.com/neuramance', 'https://github.com/NeuramanceHQ'],
   contactPoint: {
     '@type': 'ContactPoint',
     contactType: 'customer support',
-    email: 'austin@neuramance.com',
+    email: EMAIL,
   },
 };
 
@@ -107,13 +100,9 @@ export default function RootLayout({ children }: LayoutProps<'/'>) {
         <VideoBackground videoId={BACKGROUND_VIDEO_ID} />
         <Announcement>
           New: your AI agent can now request beta access for you.{' '}
-          <Link
-            href="/llms.txt"
-            prefetch={false}
-            {...stylex.props(styles.link)}
-          >
+          <a href={LLMS_HREF} {...stylex.props(styles.link)}>
             Read the agent guide
-          </Link>
+          </a>
         </Announcement>
         <Nav />
         {children}

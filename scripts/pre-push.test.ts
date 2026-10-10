@@ -1,172 +1,27 @@
-import { execFile, execFileSync, spawn, spawnSync } from 'node:child_process';
+import { spawnSync } from 'node:child_process';
 import {
   copyFileSync,
   existsSync,
   mkdirSync,
-  mkdtempSync,
   readFileSync,
   realpathSync,
   rmSync,
-  symlinkSync,
   writeFileSync,
 } from 'node:fs';
-import { tmpdir } from 'node:os';
-import { join, resolve } from 'node:path';
+import { join } from 'node:path';
 import { it } from 'vitest';
-import { TURN_CHECKS, verify } from './verify';
-
-type Cleanup = (cleanup: () => void) => void;
-const ZERO_SHA = '0'.repeat(40);
-const SCRIPTS = [
-  'typecheck',
-  'lint',
-  'lint:shell',
-  'format:check',
-  'test',
-  'test:e2e',
-];
-const PASSED =
-  /^agent-verify: suppressions, typecheck, lint, lint:shell, format:check, test, test:e2e passed in \d+\.\ds\n$/;
-
-function git(root: string, ...args: string[]): string {
-  return execFileSync(
-    'git',
-    ['-c', 'user.name=test', '-c', 'user.email=test@example.com', ...args],
-    { cwd: root, encoding: 'utf8', timeout: 10_000 },
-  ).trim();
-}
-
-const TOOL = `#!/bin/sh
-ps -o pgid= -p $$ >> groups
-trap 'echo "$1 stopped" >> calls; exit 130' INT
-echo "$1 start" >> calls
-grep -qx "$1 fails" behavior && { echo "planted failure" >&2; exit 1; }
-grep -qx "$1 lingers" behavior && sleep 0.4
-grep -qx "$1 reports-git" behavior && git rev-parse --absolute-git-dir >> calls
-test -f failing && grep -qx "$1" failing && exit 1
-echo "$1 end" >> calls
-`;
-
-function repository(finished: Cleanup, behavior = ''): string {
-  const root = mkdtempSync(join(tmpdir(), 'gate hook '));
-  finished(() => rmSync(root, { recursive: true, force: true }));
-  mkdirSync(join(root, 'scripts'));
-  mkdirSync(join(root, '.githooks'));
-  for (const name of ['pre-push.ts', 'verify.ts'])
-    copyFileSync(
-      resolve(import.meta.dirname, name),
-      join(root, 'scripts', name),
-    );
-  symlinkSync('../scripts/pre-push.ts', join(root, '.githooks/pre-push'));
-  writeFileSync(
-    join(root, 'package.json'),
-    JSON.stringify({
-      scripts: Object.fromEntries(
-        [...SCRIPTS, 'build'].map((name) => [name, `sh tool.sh ${name}`]),
-      ),
-    }),
-  );
-  writeFileSync(join(root, 'tool.sh'), TOOL);
-  writeFileSync(join(root, 'behavior'), behavior);
-  writeFileSync(join(root, '.gitignore'), 'calls\nbehavior\ngroups\n');
-  git(root, 'init', '--quiet');
-  git(root, 'config', 'core.hooksPath', '.githooks');
-  git(root, 'add', '.');
-  git(root, 'commit', '--quiet', '--message', 'fixture');
-  return root;
-}
-
-const calls = (root: string): string[] =>
-  readFileSync(join(root, 'calls'), 'utf8').trimEnd().split('\n');
-
-function gate(
-  root: string,
-  args: readonly string[] = [],
-  env = process.env,
-): Promise<{ status: number; stdout: string; stderr: string }> {
-  return new Promise((settle, reject) => {
-    execFile(
-      'bun',
-      [join(root, 'scripts/verify.ts'), ...args],
-      { cwd: root, env, encoding: 'utf8', timeout: 5_000 },
-      (error, stdout, stderr) => {
-        if (error === null) settle({ status: 0, stdout, stderr });
-        else if (typeof error.code === 'number')
-          settle({ status: error.code, stdout, stderr });
-        else reject(error);
-      },
-    );
-  });
-}
-
-function startGate(root: string, finished: Cleanup) {
-  const child = spawn('bun', [join(root, 'scripts/verify.ts')], {
-    cwd: root,
-    stdio: 'ignore',
-    timeout: 4_000,
-    killSignal: 'SIGKILL',
-  });
-  finished(() => {
-    child.kill('SIGKILL');
-    if (!existsSync(join(root, 'groups'))) return;
-    for (const pid of readFileSync(join(root, 'groups'), 'utf8')
-      .trim()
-      .split(/\s+/)
-      .map(Number)
-      .filter((pid) => pid > 0)) {
-      try {
-        process.kill(-pid, 'SIGKILL');
-      } catch (error) {
-        if (
-          !(error instanceof Error && 'code' in error && error.code === 'ESRCH')
-        )
-          throw error;
-      }
-    }
-  });
-  return {
-    child,
-    exited: new Promise<number | null>((settle) => child.on('exit', settle)),
-  };
-}
-
-function push(
-  repository: string,
-  refs: string,
-): {
-  status: number | null;
-  stderr: string;
-  calls: string[];
-} {
-  const updates = join(repository, '.git/push-updates');
-  writeFileSync(updates, refs);
-  const result = spawnSync(
-    'git',
-    [
-      'hook',
-      'run',
-      `--to-stdin=${updates}`,
-      'pre-push',
-      '--',
-      'origin',
-      'https://example.com/r',
-    ],
-    { cwd: repository, encoding: 'utf8', timeout: 20_000 },
-  );
-  const log = join(repository, 'calls');
-  return {
-    status: result.status,
-    stderr: result.stderr,
-    calls: existsSync(log)
-      ? readFileSync(log, 'utf8')
-          .trimEnd()
-          .split('\n')
-          .filter((line) => line.endsWith(' start'))
-          .map((line) => line.slice(0, -6))
-          .toSorted()
-      : [],
-  };
-}
+import { runCheck, TURN_CHECKS, verify } from './verify';
+import {
+  ZERO_SHA,
+  SCRIPTS,
+  PASSED,
+  git,
+  repository,
+  calls,
+  gate,
+  startGate,
+  push,
+} from './pre-push-fixture';
 
 it('runs the full gate and the browser suite before pushing HEAD', ({
   expect,
@@ -239,6 +94,35 @@ it.for(['first', 'later'])(
   'refuses a %s ref that is not the checked-out HEAD',
   (position, { expect, onTestFinished }) => {
     const root = repository(onTestFinished);
+    const other = git(
+      root,
+      'commit-tree',
+      'HEAD^{tree}',
+      '-p',
+      'HEAD',
+      '-m',
+      'other',
+    );
+    expect(
+      push(
+        root,
+        (position === 'later'
+          ? `refs/heads/main ${git(root, 'rev-parse', 'HEAD')} refs/heads/main ${ZERO_SHA}\n`
+          : '') + `refs/heads/other ${other} refs/heads/other ${ZERO_SHA}\n`,
+      ),
+    ).toEqual({
+      status: 1,
+      stderr:
+        'pre-push: refs/heads/other is not the checked-out HEAD; check it out and push again so it can be verified\n',
+      calls: [],
+    });
+  },
+);
+
+it.for(['first', 'later'])(
+  'reports a git error for a %s ref with an invalid commit',
+  (position, { expect, onTestFinished }) => {
+    const root = repository(onTestFinished);
     expect(
       push(
         root,
@@ -249,8 +133,7 @@ it.for(['first', 'later'])(
       ),
     ).toEqual({
       status: 1,
-      stderr:
-        'pre-push: refs/heads/other is not the checked-out HEAD; check it out and push again so it can be verified\n',
+      stderr: `pre-push: git rev-parse --verify --quiet ${'1'.repeat(40)}^{commit}: exited 1\n`,
       calls: [],
     });
   },
@@ -282,7 +165,7 @@ it.concurrent('reports every check in order at the end of a turn', async ({
   const result = await gate(root);
   expect([result.status, result.stderr]).toEqual([0, '']);
   expect(result.stdout).toMatch(
-    /^agent-verify: suppressions, typecheck, lint, lint:shell, format:check, test, build passed in \d+\.\ds\n$/,
+    /^agent-verify: suppressions, typecheck, lint, lint:shell, lint:caddy, lockfile, format:check, test, build passed in \d+\.\ds\n$/,
   );
   expect(calls(root).toSorted()).toEqual([
     'build end',
@@ -291,6 +174,8 @@ it.concurrent('reports every check in order at the end of a turn', async ({
     'format:check start',
     'lint end',
     'lint start',
+    'lint:caddy end',
+    'lint:caddy start',
     'lint:shell end',
     'lint:shell start',
     'test end',
@@ -308,13 +193,15 @@ it.concurrent('skips the tests and the build after an edit', async ({
   const result = await gate(root, [join(root, 'app/page.tsx')]);
   expect([result.status, result.stderr]).toEqual([0, '']);
   expect(result.stdout).toMatch(
-    /^agent-verify: suppressions, typecheck, lint, lint:shell, format:check passed in /,
+    /^agent-verify: suppressions, typecheck, lint, lint:shell, lint:caddy, lockfile, format:check passed in /,
   );
   expect(calls(root).toSorted()).toEqual([
     'format:check end',
     'format:check start',
     'lint end',
     'lint start',
+    'lint:caddy end',
+    'lint:caddy start',
     'lint:shell end',
     'lint:shell start',
     'typecheck end',
@@ -339,6 +226,8 @@ it.concurrent('reports a failing check after running the others', async ({
     'format:check end',
     'format:check start',
     'lint start',
+    'lint:caddy end',
+    'lint:caddy start',
     'lint:shell end',
     'lint:shell start',
     'test end',
@@ -437,7 +326,7 @@ it.concurrent.for([
     writeFileSync(
       join(root, 'tool.sh'),
       `ps -o pgid= -p $$ >> groups
-case "$1" in typecheck|test) ;; *) exit 0 ;; esac
+case "$1" in lint|test) ;; *) exit 0 ;; esac
 trap 'echo "$1 INT" >> signals' INT
 trap 'echo "$1 TERM" >> signals' TERM
 sh -c 'trap "" INT; echo $$ > "$1.child"; sleep 4' sh "$1" &
@@ -448,7 +337,7 @@ wait
     await expect
       .poll(
         () =>
-          ['typecheck', 'test'].every((name) =>
+          ['lint', 'test'].every((name) =>
             existsSync(join(root, `${name}.child`)),
           ),
         { timeout: 1_000 },
@@ -460,8 +349,8 @@ wait
       new Set(
         readFileSync(join(root, 'signals'), 'utf8').trimEnd().split('\n'),
       ),
-    ).toEqual(new Set(['test INT', 'typecheck INT']));
-    for (const name of ['typecheck', 'test']) {
+    ).toEqual(new Set(['test INT', 'lint INT']));
+    for (const name of ['lint', 'test']) {
       const pid = readFileSync(join(root, `${name}.child`), 'utf8').trim();
       await expect
         .poll(
@@ -486,7 +375,71 @@ it('refuses a repository with no commits', ({ expect, onTestFinished }) => {
   git(root, 'config', 'core.hooksPath', '.githooks');
   expect(push(root, '')).toEqual({
     status: 1,
-    stderr: 'pre-push: cannot read HEAD\n',
+    stderr: expect.stringMatching(
+      /pre-push: git rev-parse HEAD: fatal: ambiguous argument 'HEAD'/,
+    ),
     calls: [],
   });
+});
+
+it('reports a failed git status instead of claiming the checkout is dirty', ({
+  expect,
+  onTestFinished,
+}) => {
+  const root = repository(onTestFinished);
+  writeFileSync(join(root, '.git/index'), 'corrupt');
+  const result = push(root, '');
+  expect(result.status).toBe(1);
+  expect(result.stderr).toMatch(
+    /pre-push: git status --porcelain: fatal: .*index/,
+  );
+  expect(result.stderr).not.toContain('commit or stash');
+  expect(result.calls).toEqual([]);
+});
+
+it.concurrent('resolves CLI edit paths from the caller subdirectory', async ({
+  expect,
+  onTestFinished,
+}) => {
+  const root = repository(onTestFinished);
+  copyFileSync(
+    join(import.meta.dirname, 'agent-verify'),
+    join(root, 'scripts/agent-verify'),
+  );
+  mkdirSync(join(root, 'components'));
+  mkdirSync(join(root, 'public'));
+  writeFileSync(join(root, 'components/nav.tsx'), 'export {};\n');
+  writeFileSync(join(root, 'public/logo.svg'), '<svg/>');
+  writeFileSync(join(root, 'Caddyfile'), ':3099 {}\n');
+  writeFileSync(
+    join(root, '.gitignore'),
+    'calls\nbehavior\ngroups\nout/\n.vscode/\n',
+  );
+  const result = await runCheck(
+    {
+      name: 'relative edit paths',
+      command: [
+        join(root, 'scripts/agent-verify'),
+        '../public/logo.svg',
+        'nav.tsx',
+        '../Caddyfile',
+        '../out/zz.js',
+        '../.vscode/settings.json',
+        '../../outside.ts',
+      ],
+    },
+    join(root, 'components'),
+    process.env,
+    3_000,
+    new Set(),
+  );
+  expect(result.status, result.output).toBe(0);
+  expect(
+    result.output.split('\n').filter((line) => line.includes('not verified')),
+  ).toEqual([
+    'agent-verify: not verified: ../public/logo.svg (no check reads this file)',
+    'agent-verify: not verified: ../out/zz.js (no check reads this file)',
+    'agent-verify: not verified: ../.vscode/settings.json (no check reads this file)',
+    'agent-verify: not verified: ../../outside.ts (no check reads this file)',
+  ]);
 });

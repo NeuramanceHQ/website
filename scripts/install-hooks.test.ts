@@ -11,32 +11,9 @@ import { join, resolve } from 'node:path';
 import { afterEach, beforeEach, expect, it } from 'vitest';
 import { conflict } from './install-hooks';
 
-it.each([
-  { configured: '', existing: [], expected: undefined },
-  { configured: '.githooks', existing: [], expected: undefined },
-  {
-    configured: '.githooks',
-    existing: ['.git/hooks/pre-push'],
-    expected: undefined,
-  },
-  {
-    configured: '/shared/hooks',
-    existing: [],
-    expected:
-      'core.hooksPath is already /shared/hooks; call .githooks/pre-push from those hooks to verify before each push',
-  },
-  {
-    configured: '',
-    existing: ['.git/hooks/pre-push'],
-    expected:
-      'setting core.hooksPath would stop .git/hooks/pre-push from running; call .githooks/pre-push from them to verify before each push',
-  },
-])(
-  'decides whether core.hooksPath can be set: $configured $existing',
-  ({ configured, existing, expected }) => {
-    expect(conflict(configured, existing)).toBe(expected);
-  },
-);
+it('accepts .githooks even when default hooks already exist', () => {
+  expect(conflict('.githooks', ['.git/hooks/pre-push'])).toBeUndefined();
+});
 
 let directory = '';
 let globalConfig = '';
@@ -156,4 +133,35 @@ it('refuses to disable a symlinked pre-push hook', () => {
     stderr: `install-hooks: setting core.hooksPath would stop .git/hooks/pre-push from running; call .githooks/pre-push from them to verify before each push\n`,
     hooksPath: '',
   });
+});
+
+it('warns without crashing when Git cannot start', () => {
+  const bun = execFileSync('bun', ['-p', 'process.execPath'], {
+    encoding: 'utf8',
+    timeout: 10_000,
+  }).trim();
+  const result = spawnSync(
+    bun,
+    [resolve(import.meta.dirname, 'install-hooks.ts')],
+    {
+      cwd: directory,
+      encoding: 'utf8',
+      timeout: 10_000,
+      env: { ...isolated(), PATH: directory },
+    },
+  );
+  expect(result.status).toBe(0);
+  expect(result.stderr).toMatch(/install-hooks:.*git.*(?:ENOENT|not found)/);
+  expect(result.stderr).not.toContain('TypeError');
+});
+
+it('accepts an absolute hooks path naming this checkout hooks directory', () => {
+  const root = repository();
+  mkdirSync(join(root, '.githooks'));
+  git(root, 'config', 'core.hooksPath', join(root, '.githooks'));
+  for (const result of [install(root), install(root)]) {
+    expect(result.status).toBe(0);
+    expect(result.stderr).toBe('');
+    expect(result.hooksPath).toBe(join(root, '.githooks'));
+  }
 });

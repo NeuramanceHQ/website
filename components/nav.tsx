@@ -28,6 +28,7 @@ export function Nav() {
         >
           <Image
             src="/hand.svg"
+            loading="eager"
             alt=""
             width={21}
             height={26}

@@ -1,8 +1,8 @@
 #!/usr/bin/env bun
 import { spawn, spawnSync } from 'node:child_process';
-import { mkdtempSync, writeFileSync } from 'node:fs';
-import { constants, tmpdir } from 'node:os';
-import { join, resolve } from 'node:path';
+import { existsSync, realpathSync, mkdirSync, writeFileSync } from 'node:fs';
+import { constants } from 'node:os';
+import { isAbsolute, join, relative, resolve } from 'node:path';
 import { DatabaseSync } from 'node:sqlite';
 import { setTimeout as sleep } from 'node:timers/promises';
 
@@ -22,8 +22,8 @@ export type Outcome = {
 
 export type Report = { exitCode: 0 | 1; stdout: string; stderr: string };
 
-const SHOWN_HEAD_LINES = 30;
-const SHOWN_TAIL_LINES = 10;
+const SHOWN_HEAD_LINES = 10;
+const SHOWN_TAIL_LINES = 40;
 const STOP_GRACE_MS = 1_000;
 const GIT_TIMEOUT_MS = 10_000;
 const LOCK_POLL_MS = 100;
@@ -42,15 +42,23 @@ const lint: Check = { ...script('lint'), after: [typecheck] };
 export const EDIT_CHECKS: readonly Check[] = [
   {
     name: 'suppressions',
-    command: [
-      'sh',
-      '-c',
-      'git grep -nE --text --untracked "(o[x]lint|e[s]lint)-(disable|enable)" -- "*.[jt]s" "*.[jt]sx" "*.[cm][jt]s"; test $? -eq 1',
-    ],
+    command: ['sh', resolve(import.meta.dirname, 'scan-suppressions')],
   },
   typecheck,
   lint,
   script('lint:shell'),
+  script('lint:caddy'),
+  {
+    name: 'lockfile',
+    command: [
+      'bun',
+      'install',
+      '--frozen-lockfile',
+      '--dry-run',
+      '--offline',
+      '--ignore-scripts',
+    ],
+  },
   script('format:check'),
 ];
 
@@ -65,6 +73,20 @@ export const PUSH_CHECKS: readonly Check[] = [
   script('test'),
   { ...script('test:e2e'), after: [lint] },
 ];
+
+export function readsEditedFile(path: string): boolean {
+  return (
+    /\.(?:[cm]?[jt]sx?|json|md|css)$/.test(path) ||
+    [
+      'bun.lock',
+      'Caddyfile',
+      'Caddyfile.local',
+      'scripts/deploy',
+      'scripts/lint-shell',
+      'scripts/scan-suppressions',
+    ].includes(path)
+  );
+}
 
 function signalGroup(pid: number | undefined, signal: NodeJS.Signals): void {
   if (pid === undefined) {
@@ -81,16 +103,37 @@ function signalGroup(pid: number | undefined, signal: NodeJS.Signals): void {
   }
 }
 
-export function checkEnvironment(): NodeJS.ProcessEnv {
-  const local = spawnSync('git', ['rev-parse', '--local-env-vars'], {
+export function gitOutput(
+  args: string[],
+  cwd = process.cwd(),
+  env = process.env,
+): string {
+  const result = spawnSync('git', args, {
+    cwd,
+    env,
     encoding: 'utf8',
     timeout: GIT_TIMEOUT_MS,
   });
+  if (result.status !== 0) {
+    const reason =
+      result.error?.message ??
+      (result.stderr.trim() || `exited ${result.status}`);
+    throw new Error(`git ${args.join(' ')}: ${reason}`);
+  }
+  return result.stdout.trim();
+}
+
+export function checkEnvironment(): NodeJS.ProcessEnv {
+  const local = gitOutput(
+    ['rev-parse', '--local-env-vars'],
+    process.cwd(),
+    process.env,
+  );
   const env: NodeJS.ProcessEnv = {
     ...process.env,
     NEXT_TELEMETRY_DISABLED: '1',
   };
-  for (const name of (local.stdout ?? '').split('\n')) {
+  for (const name of local.split('\n')) {
     delete env[name];
   }
   return env;
@@ -164,7 +207,7 @@ export function failureReport(
     omitted > 0
       ? [
           ...lines.slice(0, SHOWN_HEAD_LINES),
-          `... ${omitted} lines omitted; full output in ${saveLog(outcome.output)}`,
+          `... ${omitted} lines omitted; ${saveLog(outcome.output)}`,
           ...lines.slice(-SHOWN_TAIL_LINES),
         ]
       : lines;
@@ -174,19 +217,79 @@ export function failureReport(
   ].join('\n');
 }
 
-function saveLog(output: string): string {
-  const path = join(mkdtempSync(join(tmpdir(), 'agent-verify-')), 'output.log');
-  writeFileSync(path, output);
-  return path;
+function gitPath(root: string, env: NodeJS.ProcessEnv, name: string): string {
+  return resolve(root, gitOutput(['rev-parse', '--git-path', name], root, env));
 }
 
-function lockPath(root: string, env: NodeJS.ProcessEnv): string | undefined {
-  const result = spawnSync(
-    'git',
-    ['rev-parse', '--git-path', 'agent-verify.lock'],
-    { cwd: root, env, encoding: 'utf8', timeout: GIT_TIMEOUT_MS },
+function saveLog(
+  root: string,
+  env: NodeJS.ProcessEnv,
+  name: string,
+  output: string,
+): string {
+  try {
+    const directory = gitPath(root, env, 'agent-verify-logs');
+    mkdirSync(directory, { recursive: true });
+    const path = join(directory, `${name}.log`);
+    writeFileSync(path, output);
+    return `full output in ${path}`;
+  } catch (error) {
+    return `full output not saved: ${error instanceof Error ? error.message : String(error)}`;
+  }
+}
+
+function editNotices(
+  root: string,
+  env: NodeJS.ProcessEnv,
+  paths: readonly string[],
+): string {
+  const targets = paths.map((path) => {
+    const absolute = isAbsolute(path) ? path : resolve(path);
+    const target = existsSync(absolute)
+      ? realpathSync.native(absolute)
+      : resolve(absolute);
+    return [relative(root, absolute), relative(root, target)] as const;
+  });
+  const local = new Set(
+    targets
+      .flat()
+      .filter(
+        (path) => path !== '' && path !== '..' && !path.startsWith('../'),
+      ),
   );
-  return result.status === 0 ? resolve(root, result.stdout.trim()) : undefined;
+  let ignored = new Set<string>();
+  if (local.size > 0) {
+    const result = spawnSync('git', ['check-ignore', '-z', '--stdin'], {
+      cwd: root,
+      env,
+      input: [...local].join('\0') + '\0',
+      encoding: 'utf8',
+      timeout: GIT_TIMEOUT_MS,
+    });
+    if (result.status !== 0 && result.status !== 1) {
+      const reason =
+        result.error?.message ??
+        (result.stderr.trim() || `exited ${result.status}`);
+      throw new Error(`git check-ignore -z --stdin: ${reason}`);
+    }
+    ignored = new Set(result.stdout.split('\0'));
+  }
+  return paths
+    .filter((_, index) => {
+      const [source, target] = targets[index]!;
+      return (
+        !local.has(source) ||
+        !local.has(target) ||
+        ignored.has(source) ||
+        ignored.has(target) ||
+        !readsEditedFile(target)
+      );
+    })
+    .map(
+      (path) =>
+        `agent-verify: not verified: ${path} (no check reads this file)\n`,
+    )
+    .join('');
 }
 
 function busy(error: unknown): boolean {
@@ -237,18 +340,46 @@ function requireEarlierPrerequisites(checks: readonly Check[]): void {
   });
 }
 
+function checkReports(
+  root: string,
+  env: NodeJS.ProcessEnv,
+  checks: readonly Check[],
+  outcomes: readonly (Outcome | undefined)[],
+): string[] {
+  const reports = outcomes
+    .filter((outcome) => outcome !== undefined)
+    .filter(({ status, timedOut }) => status !== 0 || timedOut)
+    .map(
+      (failure) =>
+        `${failureReport(failure, (output) => saveLog(root, env, failure.check.name, output))}\n`,
+    );
+  const late = checks
+    .filter((_, index) => outcomes[index] === undefined)
+    .map(({ name }) => name);
+  if (late.length > 0) {
+    reports.push(`FAIL [deadline] no time left to run ${late.join(', ')}\n`);
+  }
+  return reports;
+}
+
 export async function verify(
   root: string,
   checks: readonly Check[],
   deadline: number,
   running: Set<number>,
+  paths: readonly string[] = [],
 ): Promise<Report> {
   requireEarlierPrerequisites(checks);
   const started = performance.now();
-  const env = checkEnvironment();
-  const path = lockPath(root, env);
-  if (path === undefined) {
-    return failed(`FAIL [lock] ${root} is not a Git checkout\n`);
+  let env: NodeJS.ProcessEnv;
+  let path: string;
+  try {
+    env = checkEnvironment();
+    path = gitPath(root, env, 'agent-verify.lock');
+  } catch (error) {
+    return failed(
+      `FAIL [git] ${error instanceof Error ? error.message : String(error)}\n`,
+    );
   }
   const lock = await acquireLock(path, deadline);
   if (lock === undefined) {
@@ -257,7 +388,6 @@ export async function verify(
     );
   }
   const pending = new Map<Check, Promise<Outcome | undefined>>();
-  let outcomes: (Outcome | undefined)[];
   try {
     for (const check of checks) {
       const prerequisites = (check.after ?? []).map((item) =>
@@ -272,35 +402,37 @@ export async function verify(
         }),
       );
     }
-    outcomes = await Promise.all(checks.map((check) => pending.get(check)!));
+    const outcomes = await Promise.all(
+      checks.map((check) => pending.get(check)!),
+    );
+    const reports = checkReports(root, env, checks, outcomes);
+    if (reports.length > 0) {
+      return failed(reports.join(''));
+    }
+    const seconds = ((performance.now() - started) / 1000).toFixed(1);
+    const names = checks.map(({ name }) => name).join(', ');
+    let notices: string;
+    try {
+      notices = editNotices(root, env, paths);
+    } catch (error) {
+      return failed(
+        `FAIL [git] ${error instanceof Error ? error.message : String(error)}\n`,
+      );
+    }
+    return {
+      exitCode: 0,
+      stdout: `agent-verify: ${names} passed in ${seconds}s\n${notices}`,
+      stderr: '',
+    };
   } finally {
     lock.close();
   }
-  const late = checks
-    .filter((_, index) => outcomes[index] === undefined)
-    .map(({ name }) => name);
-  const reports = outcomes
-    .filter((outcome) => outcome !== undefined)
-    .filter(({ status, timedOut }) => status !== 0 || timedOut)
-    .map((failure) => `${failureReport(failure, saveLog)}\n`);
-  if (late.length > 0) {
-    reports.push(`FAIL [deadline] no time left to run ${late.join(', ')}\n`);
-  }
-  if (reports.length > 0) {
-    return failed(reports.join(''));
-  }
-  const seconds = ((performance.now() - started) / 1000).toFixed(1);
-  const names = checks.map(({ name }) => name).join(', ');
-  return {
-    exitCode: 0,
-    stdout: `agent-verify: ${names} passed in ${seconds}s\n`,
-    stderr: '',
-  };
 }
 
 export async function main(
   checks: readonly Check[],
   budgetMs: number,
+  paths: readonly string[] = [],
 ): Promise<void> {
   const running = new Set<number>();
   for (const signal of ['SIGINT', 'SIGTERM', 'SIGHUP'] as const) {
@@ -318,7 +450,13 @@ export async function main(
     });
   }
   const root = resolve(import.meta.dirname, '..');
-  const report = await verify(root, checks, Date.now() + budgetMs, running);
+  const report = await verify(
+    root,
+    checks,
+    Date.now() + budgetMs,
+    running,
+    paths,
+  );
   process.stdout.write(report.stdout);
   process.stderr.write(report.stderr);
   process.exitCode = report.exitCode;
@@ -329,5 +467,6 @@ if (import.meta.main) {
   await main(
     edited ? EDIT_CHECKS : TURN_CHECKS,
     edited ? EDIT_BUDGET_MS : TURN_BUDGET_MS,
+    process.argv.slice(2),
   );
 }

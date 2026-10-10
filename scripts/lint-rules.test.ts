@@ -1,6 +1,5 @@
 import { spawnSync } from 'node:child_process';
 import {
-  copyFileSync,
   mkdirSync,
   mkdtempSync,
   readFileSync,
@@ -14,6 +13,57 @@ import { expect, it } from 'vitest';
 import { runCheck } from './verify';
 
 const root = resolve(import.meta.dirname, '..');
+
+it.concurrent.for([
+  {
+    name: 'fails lint on a warning',
+    source: 'const unused = 1;\nexport {};\n',
+    rule: 'Warning/eslint(no-unused-vars)',
+  },
+  {
+    name: 'runs type-aware lint rules',
+    source:
+      'async function f() {}\nexport function floating(): void {\n  f();\n}\n',
+    rule: 'Error/typescript(no-floating-promises)',
+  },
+])(
+  '$name',
+  { timeout: 15_000 },
+  async ({ source, rule }, { expect, onTestFinished }) => {
+    const directory = mkdtempSync(join(tmpdir(), 'lint settings '));
+    onTestFinished(() => rmSync(directory, { recursive: true, force: true }));
+    for (const file of ['.gitignore', 'package.json', 'tsconfig.json']) {
+      writeFileSync(join(directory, file), readFileSync(join(root, file)));
+    }
+    const config = JSON.parse(
+      readFileSync(join(root, '.oxlintrc.json'), 'utf8'),
+    );
+    config.jsPlugins = config.jsPlugins.map((plugin: string) =>
+      plugin.startsWith('./') ? resolve(root, plugin) : plugin,
+    );
+    writeFileSync(join(directory, '.oxlintrc.json'), JSON.stringify(config));
+    symlinkSync(join(root, 'node_modules'), join(directory, 'node_modules'));
+    writeFileSync(join(directory, 'fixture.ts'), source);
+    const result = await runCheck(
+      {
+        name: 'lint settings',
+        command: ['bun', 'run', '--silent', 'lint', '--format=unix'],
+      },
+      directory,
+      process.env,
+      10_000,
+      new Set(),
+    );
+    expect(result.timedOut, result.output).toBe(false);
+    expect(
+      [...result.output.matchAll(/^fixture\.ts:\d+:\d+: .* \[(.+)\]$/gm)].map(
+        ([, finding]) => finding,
+      ),
+      result.output,
+    ).toEqual([rule]);
+    expect(result.status, result.output).toBe(1);
+  },
+);
 
 function lint(sources: Record<string, string>): string[] {
   const directory = mkdtempSync(join(tmpdir(), 'lint rules '));
@@ -88,6 +138,26 @@ it('checks mock calls', () => {
   expect(spy.mock.calls).toEqual([[1]]);
   spy.mockRestore();
 });
+
+it('uses the test context members', (context) => {
+  const value = { count: 1 };
+  const other = { count: 1 };
+  context.expect(value).toEqual(value);
+  context.expect.soft(value).toBe(value);
+  expect(value).toMatchObject(value);
+  context.expect(value).toEqual(other);
+  context.expect(value).toMatchObject({ count: 1 });
+});
+
+it('ignores a local expect method', () => {
+  const helper = {
+    expect: (actual: number) => ({ toBe: (expected: number) => actual === expected }),
+  };
+  helper.expect(1).toBe(1);
+});
+
+import * as chai from 'chai';
+chai.expect(1).toBe(1);
 `;
 
 const playwright = `import { expect, test } from '@playwright/test';
@@ -133,6 +203,9 @@ it('reports self-comparing Vitest and Playwright assertions through the reposito
     `vitest.test.ts:10 ${TAUTOLOGY}`,
     `vitest.test.ts:27 ${TAUTOLOGY}`,
     `vitest.test.ts:31 ${TAUTOLOGY}`,
+    `vitest.test.ts:52 ${TAUTOLOGY}`,
+    `vitest.test.ts:53 ${TAUTOLOGY}`,
+    `vitest.test.ts:54 ${TAUTOLOGY}`,
     `vitest.test.ts:7 ${TAUTOLOGY}`,
     `vitest.test.ts:8 ${TAUTOLOGY}`,
     `vitest.test.ts:9 ${TAUTOLOGY}`,
@@ -190,18 +263,22 @@ it('lints and checks the formatting of files that ignore files or nested configs
       join(directory, 'nested/.oxfmtrc.json'),
       JSON.stringify({ ignorePatterns: ['*.ts'] }),
     );
-    const run = (name: string): string => {
+    const run = (name: string, ...extraArgs: string[]): string => {
       const [tool, ...args] = scripts[name]?.split(' ') ?? [];
       const result = spawnSync(
         join(root, 'node_modules/.bin', tool ?? ''),
-        args,
+        [...args, ...extraArgs],
         { cwd: directory, encoding: 'utf8', timeout: 10_000 },
       );
       return `${result.status} ${result.stdout}`;
     };
-    const lint = run('lint');
-    expect(lint).toMatch(/(^|\n|\s)buggy\.ts:1:1: .*no-debugger/);
-    expect(lint).toMatch(/nested\/buggy\.ts:1:1: .*no-debugger/);
+    const lint = run('lint', '--format=unix');
+    expect(lint).toMatch(
+      /(^|\n|\s)buggy\.ts:1:1: .* \[Warning\/eslint\(no-debugger\)\]/,
+    );
+    expect(lint).toMatch(
+      /nested\/buggy\.ts:1:1: .* \[Warning\/eslint\(no-debugger\)\]/,
+    );
     const format = run('format:check');
     expect(format).toMatch(/^1 /);
     expect(format).toMatch(/(^|\n|\s)hidden\.ts/);
@@ -289,11 +366,18 @@ it('keeps imports flowing from app/ to components/ to lib/, without cycles, and 
       'scripts/tool.ts': "export const tool = 'tool';\n",
       'e2e/peek.spec.ts':
         "import { SITE } from '@/lib/site';\nexport const peek = SITE;\n",
+      'e2e/unguarded.spec.ts':
+        "import { test } from '@playwright/test';\nexport const unguarded = test;\n",
+      'e2e/assertion.spec.ts':
+        "import { expect } from '@playwright/test';\nexport const assertion = expect;\n",
+      'e2e/helpers.ts':
+        "import { test } from '@playwright/test';\nexport const guarded = test;\n",
     }),
   ).toEqual([
     'app/tooling.ts:1 eslint(no-restricted-imports)',
     'components/upward.tsx:1 eslint(no-restricted-imports)',
     'e2e/peek.spec.ts:1 eslint(no-restricted-imports)',
+    'e2e/unguarded.spec.ts:1 eslint(no-restricted-imports)',
     'lib/a.ts:1 import(no-cycle)',
     'lib/b.ts:1 import(no-cycle)',
     'lib/nested.ts:1 eslint(no-restricted-imports)',
@@ -381,62 +465,3 @@ it('enforces each complexity ceiling at its boundary', () => {
     'switch-10.ts:1 eslint(complexity)',
   ]);
 });
-
-it('enforces complexity across repository paths through the lint script', async () => {
-  const directory = mkdtempSync(join(tmpdir(), 'lint coverage '));
-  try {
-    for (const file of [
-      '.gitignore',
-      '.oxlintrc.json',
-      'tsconfig.json',
-      'scripts/lint-rules.mts',
-      'package.json',
-    ]) {
-      mkdirSync(dirname(join(directory, file)), { recursive: true });
-      copyFileSync(join(root, file), join(directory, file));
-    }
-    symlinkSync(join(root, 'node_modules'), join(directory, 'node_modules'));
-    for (const file of [
-      'app/x.tsx',
-      'components/x.tsx',
-      'components/x.test.ts',
-      'components/x.test.tsx',
-      'lib/x.ts',
-      'e2e/x.spec.ts',
-      'scripts/x.ts',
-      'scripts/x.mts',
-    ]) {
-      mkdirSync(dirname(join(directory, file)), { recursive: true });
-      writeFileSync(join(directory, file), branching(11));
-    }
-    const result = await runCheck(
-      { name: 'lint', command: ['bun', 'run', '--silent', 'lint'] },
-      directory,
-      process.env,
-      10_000,
-      new Set(),
-    );
-    expect(result.timedOut, result.output).toBe(false);
-    expect(result.status, result.output).toBe(1);
-    expect(
-      [
-        ...result.output.matchAll(
-          /^([\w./-]+\.[cm]?tsx?):\d+:\d+: error eslint\(complexity\): /gm,
-        ),
-      ]
-        .map(([, file]) => file)
-        .toSorted(),
-    ).toEqual([
-      'app/x.tsx',
-      'components/x.test.ts',
-      'components/x.test.tsx',
-      'components/x.tsx',
-      'e2e/x.spec.ts',
-      'lib/x.ts',
-      'scripts/x.mts',
-      'scripts/x.ts',
-    ]);
-  } finally {
-    rmSync(directory, { recursive: true, force: true });
-  }
-}, 15_000);

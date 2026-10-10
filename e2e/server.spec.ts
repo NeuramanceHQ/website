@@ -1,7 +1,31 @@
-import { expect, test } from '@playwright/test';
-import { ACCESS_EMAIL, blockExternal, HEADLINE } from './helpers';
+import { expect } from '@playwright/test';
+import { ACCESS_EMAIL, HEADLINE, test } from './helpers';
 
-test.beforeEach(blockExternal);
+for (const name of ['Read the agent guide', 'Read llms.txt', 'llms.txt']) {
+  test(`${name} opens /llms.txt with only one document request`, async ({
+    page,
+  }) => {
+    const requests: { path: string; search: string; type: string }[] = [];
+    page.on('request', (request) => {
+      const url = new URL(request.url());
+      if (url.pathname.startsWith('/llms.txt')) {
+        requests.push({
+          path: url.pathname,
+          search: url.search,
+          type: request.resourceType(),
+        });
+      }
+    });
+    await page.goto('/');
+    const link = page.getByRole('link', { name, exact: true });
+    await link.hover();
+    await link.click();
+    await expect.soft(page).toHaveURL('/llms.txt', { timeout: 10_000 });
+    expect(requests).toEqual([
+      { path: '/llms.txt', search: '', type: 'document' },
+    ]);
+  });
+}
 
 test('/llms.txt serves the agent guide and is linked from the home page', async ({
   page,
@@ -211,6 +235,61 @@ for (const { route, title } of [
       'content',
       title,
     );
+    await expect(page.locator('meta[name="twitter:title"]')).toHaveAttribute(
+      'content',
+      title,
+    );
+  });
+}
+
+test('/error offers email contact without a retry action', async ({ page }) => {
+  await page.goto('/error');
+  const contact = page.getByRole('link', {
+    name: 'reach out to us',
+    exact: true,
+  });
+  await expect(contact).toHaveAttribute('href', 'mailto:austin@neuramance.com');
+  await expect(contact).toHaveCSS('text-decoration-line', 'underline');
+  await expect(
+    page.getByRole('button', { name: 'Try again', exact: true }),
+  ).toHaveCount(0);
+});
+
+for (const route of ['/', '/waitlist', '/error', '/about']) {
+  test(`${route} social metadata matches its document title and shared image`, async ({
+    page,
+  }) => {
+    await page.goto(route);
+    const title = await page.title();
+    for (const [selector, content] of [
+      ['meta[property="og:title"]', title],
+      ['meta[name="twitter:title"]', title],
+      ['meta[name="twitter:card"]', 'summary_large_image'],
+      [
+        'meta[property="og:image"]',
+        'https://neuramance.com/opengraph-image.jpg',
+      ],
+      [
+        'meta[name="twitter:image"]',
+        'https://neuramance.com/opengraph-image.jpg',
+      ],
+      ['meta[property="og:image:width"]', '1200'],
+      ['meta[property="og:image:height"]', '630'],
+      [
+        'meta[name="description"]',
+        'Neuramance lets AI agents like Claude Code and Codex quote, order, and track real metal parts and fabrication, programmatically.',
+      ],
+      [
+        'meta[property="og:description"]',
+        'Your agent sends the CAD file; we ship the metal part. CNC machining, sheet metal, laser cutting, and finishing for Claude Code, Codex, and any AI agent.',
+      ],
+      [
+        'meta[name="twitter:description"]',
+        'Your agent sends the CAD file; we ship the metal part. CNC machining, sheet metal, laser cutting, and finishing for Claude Code, Codex, and any AI agent.',
+      ],
+    ]) {
+      await expect(page.locator(selector)).toHaveAttribute('content', content);
+    }
   });
 }
 

@@ -1,6 +1,9 @@
 {
 	admin off
 	persist_config off
+	log default {
+		level WARN
+	}
 }
 
 import Caddyfile

@@ -1,109 +1,27 @@
 import { execFileSync } from 'node:child_process';
 import {
   accessSync,
+  copyFileSync,
+  readdirSync,
+  symlinkSync,
   constants,
   realpathSync,
-  existsSync,
   mkdirSync,
-  mkdtempSync,
   readFileSync,
-  rmSync,
   writeFileSync,
 } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
-import { setTimeout as sleep } from 'node:timers/promises';
 import { it } from 'vitest';
 import {
   EDIT_CHECKS,
-  failureReport,
   PUSH_CHECKS,
   runCheck,
   TURN_CHECKS,
   verify,
   type Check,
 } from './verify';
-
-type Cleanup = (cleanup: () => void) => void;
-
-function scratch(finished: Cleanup): string {
-  const directory = mkdtempSync(join(tmpdir(), 'agent verify '));
-  finished(() => rmSync(directory, { recursive: true, force: true }));
-  return directory;
-}
-
-function repository(finished: Cleanup): string {
-  const root = scratch(finished);
-  execFileSync('git', ['init', '--quiet'], { cwd: root, timeout: 10_000 });
-  return root;
-}
-
-it.concurrent('runs independent checks concurrently at a rendezvous', async ({
-  expect,
-  onTestFinished,
-}) => {
-  const root = repository(onTestFinished);
-  const checks: Check[] = ['a', 'b'].map((name, index) => ({
-    name,
-    command: [
-      'sh',
-      '-c',
-      'touch "$1"; until test -e "$2"; do sleep 0.01; done',
-      'sh',
-      name,
-      index === 0 ? 'b' : 'a',
-    ],
-  }));
-  const report = await verify(root, checks, Date.now() + 500, new Set());
-  expect([report.exitCode, report.stderr]).toEqual([0, '']);
-  expect(report.stdout).toMatch(/^agent-verify: a, b passed in /);
-});
-
-it.concurrent.for([0, 1])(
-  'waits for a prerequisite that exits %i',
-  async (status, { expect, onTestFinished }) => {
-    const root = repository(onTestFinished);
-    const first: Check = {
-      name: 'first',
-      command: ['sh', '-c', `sleep 0.08; touch ready; exit ${status}`],
-    };
-    const second: Check = {
-      name: 'second',
-      command: ['sh', '-c', 'test -e ready && touch dependent'],
-      after: [first],
-    };
-    const report = await verify(
-      root,
-      [first, second],
-      Date.now() + 1_000,
-      new Set(),
-    );
-    expect(existsSync(join(root, 'dependent'))).toBe(true);
-    expect(report.exitCode).toBe(status);
-    expect(report.stderr).toBe(
-      status === 0
-        ? ''
-        : 'FAIL [first] sh -c sleep 0.08; touch ready; exit 1 exited 1\n',
-    );
-  },
-);
-
-it.concurrent('rejects a missing prerequisite before starting checks', async ({
-  expect,
-  onTestFinished,
-}) => {
-  const root = repository(onTestFinished);
-  const absent: Check = { name: 'absent', command: ['true'] };
-  await expect(
-    verify(
-      root,
-      [{ name: 'dependent', command: ['touch', 'started'], after: [absent] }],
-      Date.now() + 500,
-      new Set(),
-    ),
-  ).rejects.toThrow(/dependent.*absent/);
-  expect(existsSync(join(root, 'started'))).toBe(false);
-});
+import { scratch, emptyRepository as repository } from './pre-push-fixture';
 
 it('defines the ordered edit, turn and push dependency graphs', ({
   expect,
@@ -118,6 +36,8 @@ it('defines the ordered edit, turn and push dependency graphs', ({
     ['typecheck', []],
     ['lint', ['typecheck']],
     ['lint:shell', []],
+    ['lint:caddy', []],
+    ['lockfile', []],
     ['format:check', []],
   ]);
   expect(graph(TURN_CHECKS)).toEqual([
@@ -125,6 +45,8 @@ it('defines the ordered edit, turn and push dependency graphs', ({
     ['typecheck', []],
     ['lint', ['typecheck']],
     ['lint:shell', []],
+    ['lint:caddy', []],
+    ['lockfile', []],
     ['format:check', []],
     ['test', []],
     ['build', ['lint']],
@@ -134,174 +56,12 @@ it('defines the ordered edit, turn and push dependency graphs', ({
     ['typecheck', []],
     ['lint', ['typecheck']],
     ['lint:shell', []],
+    ['lint:caddy', []],
+    ['lockfile', []],
     ['format:check', []],
     ['test', []],
     ['test:e2e', ['lint']],
   ]);
-});
-
-it.concurrent('reports a check that cannot start through the full gate', async ({
-  expect,
-  onTestFinished,
-}) => {
-  const root = repository(onTestFinished);
-  const report = await verify(
-    root,
-    [{ name: 'missing', command: [join(root, 'missing-tool')] }],
-    Date.now() + 1_000,
-    new Set(),
-  );
-  expect([report.exitCode, report.stdout]).toEqual([1, '']);
-  expect(report.stderr).toMatch(
-    /^FAIL \[missing\] .*missing-tool could not start\n.*ENOENT/,
-  );
-});
-
-it.concurrent('saves exactly the full output of a long failure', async ({
-  expect,
-  onTestFinished,
-}) => {
-  const root = repository(onTestFinished);
-  const output = Array.from(
-    { length: 45 },
-    (_, index) => `line ${index + 1}\n`,
-  ).join('');
-  writeFileSync(join(root, 'output'), output);
-  const report = await verify(
-    root,
-    [{ name: 'long', command: ['sh', '-c', 'cat output; exit 1'] }],
-    Date.now() + 1_000,
-    new Set(),
-  );
-  const path = /5 lines omitted; full output in (.*)\n/.exec(
-    report.stderr,
-  )?.[1];
-  expect(path).toBeDefined();
-  if (path === undefined) throw new Error('missing log path');
-  onTestFinished(() => rmSync(dirname(path), { recursive: true, force: true }));
-  expect(readFileSync(path, 'utf8')).toBe(output);
-  expect(report.exitCode).toBe(1);
-  expect(report.stderr.split('\n')).toEqual([
-    'FAIL [long] sh -c cat output; exit 1 exited 1',
-    ...Array.from({ length: 30 }, (_, index) => `line ${index + 1}`),
-    `... 5 lines omitted; full output in ${path}`,
-    ...Array.from({ length: 10 }, (_, index) => `line ${index + 36}`),
-    '',
-  ]);
-});
-
-it.concurrent('shows a failure of 40 lines in full without saving it', ({
-  expect,
-}) => {
-  const lines = Array.from({ length: 40 }, (_, index) => `line ${index + 1}`);
-  expect(
-    failureReport(
-      {
-        check: { name: 'lint', command: ['oxlint'] },
-        status: 1,
-        signal: null,
-        timedOut: false,
-        output: `${lines.join('\n')}\n`,
-      },
-      () => {
-        throw new Error('a short failure must not be saved');
-      },
-    ).split('\n'),
-  ).toEqual(['FAIL [lint] oxlint exited 1', ...lines]);
-});
-
-it.concurrent('reports failures in list order despite reversed completion', async ({
-  expect,
-  onTestFinished,
-}) => {
-  const root = repository(onTestFinished);
-  const checks: Check[] = [
-    { name: 'first', command: ['sh', '-c', 'sleep 0.08; echo first; exit 1'] },
-    { name: 'second', command: ['sh', '-c', 'echo second; exit 2'] },
-  ];
-  const report = await verify(root, checks, Date.now() + 1_000, new Set());
-  expect(report.stderr).toBe(
-    'FAIL [first] sh -c sleep 0.08; echo first; exit 1 exited 1\nfirst\nFAIL [second] sh -c echo second; exit 2 exited 2\nsecond\n',
-  );
-});
-
-it.concurrent('stops a check and its descendants at the deadline', async ({
-  expect,
-  onTestFinished,
-}) => {
-  const root = scratch(onTestFinished);
-  const outcome = await runCheck(
-    { name: 'slow', command: ['sh', '-c', '(sleep 1.5; touch marker) & wait'] },
-    root,
-    process.env,
-    80,
-    new Set(),
-  );
-  await sleep(600);
-  expect([
-    outcome.timedOut,
-    outcome.status,
-    existsSync(join(root, 'marker')),
-  ]).toEqual([true, null, false]);
-});
-
-it.concurrent('lets a timed-out check clean up before killing what ignores the request', async ({
-  expect,
-  onTestFinished,
-}) => {
-  const root = scratch(onTestFinished);
-  const running = new Set<number>();
-  const [polite, stubborn] = await Promise.all([
-    runCheck(
-      {
-        name: 'polite',
-        command: [
-          'sh',
-          '-c',
-          'trap "touch cleaned; exit 1" INT; sleep 3 & wait',
-        ],
-      },
-      root,
-      process.env,
-      80,
-      running,
-    ),
-    runCheck(
-      { name: 'stubborn', command: ['sh', '-c', 'trap "" INT; sleep 3'] },
-      root,
-      process.env,
-      80,
-      running,
-    ),
-  ]);
-  expect([polite.timedOut, existsSync(join(root, 'cleaned'))]).toEqual([
-    true,
-    true,
-  ]);
-  expect([stubborn.timedOut, stubborn.signal, running.size]).toEqual([
-    true,
-    'SIGKILL',
-    0,
-  ]);
-  expect(failureReport(stubborn, () => 'unused')).toBe(
-    'FAIL [stubborn] sh -c trap "" INT; sleep 3 timed out',
-  );
-});
-
-it.concurrent('reports a check killed by a signal', async ({
-  expect,
-  onTestFinished,
-}) => {
-  const outcome = await runCheck(
-    { name: 'crash', command: ['sh', '-c', 'kill -TERM $$'] },
-    scratch(onTestFinished),
-    process.env,
-    1_000,
-    new Set(),
-  );
-  expect(failureReport(outcome, () => 'unused')).toBe(
-    'FAIL [crash] sh -c kill -TERM $$ killed by SIGTERM',
-  );
 });
 
 it.concurrent('rejects lint suppression directives in code, wherever they hide', async ({
@@ -333,78 +93,52 @@ it.concurrent('rejects lint suppression directives in code, wherever they hide',
     new Set(),
   );
   expect(result.exitCode).toBe(1);
-  expect(result.stderr.split('\n')).toEqual([
-    'FAIL [suppressions] sh -c git grep -nE --text --untracked "(o[x]lint|e[s]lint)-(disable|enable)" -- "*.[jt]s" "*.[jt]sx" "*.[cm][jt]s"; test $? -eq 1 exited 1',
+  expect(result.stderr.split('\n')[0]).toMatch(
+    /^FAIL \[suppressions\] .* exited 1$/,
+  );
+  expect(result.stderr.split('\n').slice(1)).toEqual([
     `components/binary.ts:2:/*\0*/ // ${directive}-line`,
     `components/hidden.tsx:2:/* ${directive} */`,
     '',
   ]);
 });
 
-it.concurrent('reports the checks it had no time to run instead of starting them', async ({
-  expect,
-  onTestFinished,
-}) => {
-  const root = repository(onTestFinished);
-  const first: Check = { name: 'first', command: ['sh', '-c', 'sleep 3'] };
-  const second: Check = {
-    name: 'second',
-    command: ['touch', 'late'],
-    after: [first],
-  };
-  const third: Check = {
-    name: 'third',
-    command: ['touch', 'late'],
-    after: [second],
-  };
-  const report = await verify(
-    root,
-    [first, second, third],
-    Date.now() + 500,
-    new Set(),
-  );
-  expect(report.exitCode).toBe(1);
-  expect(report.stderr).toBe(
-    'FAIL [first] sh -c sleep 3 timed out\nFAIL [deadline] no time left to run second, third\n',
-  );
-  expect(existsSync(join(root, 'late'))).toBe(false);
-});
-
-it.concurrent('rejects a prerequisite listed after its dependent before starting checks', async ({
-  expect,
-  onTestFinished,
-}) => {
-  const root = repository(onTestFinished);
-  const first: Check = { name: 'first', command: ['touch', 'started'] };
-  const second: Check = { name: 'second', command: ['true'], after: [first] };
-  await expect(
-    verify(root, [second, first], Date.now() + 500, new Set()),
-  ).rejects.toThrow('second requires first earlier in the list');
-  expect(existsSync(join(root, 'started'))).toBe(false);
-});
-
-it.concurrent('gives a dependent only the time remaining when it starts', async ({
-  expect,
-  onTestFinished,
-}) => {
-  const root = repository(onTestFinished);
-  const first: Check = { name: 'first', command: ['sh', '-c', 'sleep 0.45'] };
-  const second: Check = {
-    name: 'second',
-    command: ['sh', '-c', 'sleep 0.6'],
-    after: [first],
-  };
-  const report = await verify(
-    root,
-    [first, second],
-    Date.now() + 900,
-    new Set(),
-  );
-  expect([report.exitCode, report.stderr]).toEqual([
-    1,
-    'FAIL [second] sh -c sleep 0.6 timed out\n',
-  ]);
-});
+it.concurrent.for(['components/.gitignore', '.git/info/exclude'])(
+  'rejects tracked files hidden by %s',
+  async (ignore, { expect, onTestFinished }) => {
+    const root = repository(onTestFinished);
+    mkdirSync(join(root, 'components'));
+    writeFileSync(join(root, 'components/hidden.tsx'), 'export {};\n');
+    execFileSync('git', ['add', 'components/hidden.tsx'], {
+      cwd: root,
+      timeout: 10_000,
+    });
+    writeFileSync(join(root, 'components/untracked.tsx'), 'export {};\n');
+    writeFileSync(join(root, ignore), 'untracked.tsx\n');
+    const clean = await verify(
+      root,
+      EDIT_CHECKS.slice(0, 1),
+      Date.now() + 1_000,
+      new Set(),
+    );
+    expect([clean.exitCode, clean.stderr]).toEqual([0, '']);
+    writeFileSync(join(root, ignore), 'untracked.tsx\nhidden.tsx\n');
+    const hidden = await verify(
+      root,
+      EDIT_CHECKS.slice(0, 1),
+      Date.now() + 1_000,
+      new Set(),
+    );
+    expect(hidden.exitCode).toBe(1);
+    expect(hidden.stderr.split('\n')[0]).toMatch(
+      /^FAIL \[suppressions\] .* exited 1$/,
+    );
+    expect(hidden.stderr.split('\n').slice(1)).toEqual([
+      'tracked file hidden by an ignore rule: components/hidden.tsx',
+      '',
+    ]);
+  },
+);
 
 it.for([
   ['scripts/agent-verify', 'scripts/verify.ts'],
@@ -415,30 +149,234 @@ it.for([
   expect(realpathSync(resolve(root, link))).toBe(resolve(root, target));
 });
 
-it.concurrent('starts after all prerequisites without waiting for unrelated checks', async ({
+it.concurrent.for([
+  ['scripts/check', ['# shellcheck', 'disable=SC2086'].join(' ')],
+  ['a.test.ts', ['it', 'skip'].join('.') + '('],
+  ['a.test.ts', ['describe', 'skip'].join('.') + '('],
+  ['a.test.ts', ['it', 'todo'].join('.') + '('],
+  ['a.test.ts', ['it', 'fails'].join('.') + '('],
+  ['a.test.ts', ['it', 'skipIf'].join('.') + '('],
+  ['a.test.tsx', ['it', 'runIf'].join('.') + '('],
+  ['a.test.tsx', ['it', 'only'].join('.') + '('],
+  ['e2e/x.spec.ts', ['test', 'fixme'].join('.') + '('],
+  ['e2e/x.spec.ts', ['test', 'skip'].join('.') + '('],
+  ['e2e/x.spec.ts', ['test', 'fail'].join('.') + '()'],
+  ['e2e/x.spec.ts', ['test', 'fail'].join('.') + '(true, "known failure")'],
+  ...['skip', 'only', 'todo', 'fails'].map((modifier) => [
+    'a.test.ts',
+    `it('y', { ${modifier}: true }, () => {})`,
+  ]),
+])(
+  'rejects bypasses in %s: %s',
+  async ([file, source], { expect, onTestFinished }) => {
+    const root = repository(onTestFinished);
+    mkdirSync(dirname(join(root, file)), { recursive: true });
+    writeFileSync(join(root, file), source + '\n');
+    const report = await verify(
+      root,
+      EDIT_CHECKS.slice(0, 1),
+      Date.now() + 1_000,
+      new Set(),
+    );
+    expect(report.exitCode, report.stderr).toBe(1);
+    expect(report.stderr).toContain(`${file}:1:`);
+  },
+);
+
+it.concurrent('accepts an rc-free repository and ordinary member access outside tests', async ({
   expect,
   onTestFinished,
 }) => {
   const root = repository(onTestFinished);
-  const fast: Check = { name: 'fast', command: ['touch', 'fast'] };
-  const slow: Check = {
-    name: 'slow',
-    command: ['sh', '-c', 'sleep 0.08; touch slow'],
-  };
-  const dependent: Check = {
-    name: 'dependent',
-    command: ['sh', '-c', 'test -e fast && test -e slow && touch dependent'],
-    after: [fast, slow],
-  };
-  const unrelated: Check = {
-    name: 'unrelated',
-    command: ['sh', '-c', 'until test -e dependent; do sleep 0.01; done'],
-  };
+  mkdirSync(join(root, 'components'));
+  writeFileSync(
+    join(root, 'components/a.ts'),
+    ['value', 'skip'].join('.') + '();\n',
+  );
   const report = await verify(
     root,
-    [unrelated, fast, slow, dependent],
-    Date.now() + 2_000,
+    EDIT_CHECKS.slice(0, 1),
+    Date.now() + 1_000,
     new Set(),
   );
   expect([report.exitCode, report.stderr]).toEqual([0, '']);
+});
+
+it.concurrent('reports scanner Git errors with status at least two', async ({
+  expect,
+  onTestFinished,
+}) => {
+  const outcome = await runCheck(
+    EDIT_CHECKS[0],
+    scratch(onTestFinished),
+    { ...process.env, GIT_CEILING_DIRECTORIES: tmpdir() },
+    1_000,
+    new Set(),
+  );
+  expect(outcome.status).toBeGreaterThanOrEqual(2);
+  expect(outcome.output).toContain('not a git repository');
+});
+
+it.concurrent.for([false, true])(
+  'checks lockfile freshness with a stale manifest: %s',
+  async (stale, { expect, onTestFinished }) => {
+    const root = repository(onTestFinished);
+    for (const file of ['package.json', 'bun.lock']) {
+      copyFileSync(resolve(import.meta.dirname, '..', file), join(root, file));
+    }
+    if (stale) {
+      const path = join(root, 'package.json');
+      const manifest = JSON.parse(readFileSync(path, 'utf8'));
+      manifest.dependencies.react = '19.3.1';
+      writeFileSync(path, JSON.stringify(manifest));
+    }
+    const report = await verify(
+      root,
+      EDIT_CHECKS.filter(({ name }) => name === 'lockfile'),
+      Date.now() + 5_000,
+      new Set(),
+    );
+    expect(report.exitCode, report.stderr).toBe(stale ? 1 : 0);
+    if (stale) expect(report.stderr).toContain('lockfile');
+  },
+);
+
+it.concurrent('does not install dependencies or run prepare during the lockfile check', async ({
+  expect,
+  onTestFinished,
+}) => {
+  const root = repository(onTestFinished);
+  for (const file of ['package.json', 'bun.lock'])
+    copyFileSync(resolve(import.meta.dirname, '..', file), join(root, file));
+  mkdirSync(join(root, 'scripts'));
+  writeFileSync(
+    join(root, 'scripts/install-hooks.ts'),
+    'Bun.write("prepared", "ran");\n',
+  );
+  const before = readdirSync(root).toSorted();
+  const check = EDIT_CHECKS.find(({ name }) => name === 'lockfile');
+  expect(check).toBeDefined();
+  if (check === undefined) throw new Error('missing lockfile check');
+  const config = readFileSync(join(root, '.git/config'), 'utf8');
+  const lock = readFileSync(join(root, 'bun.lock'), 'utf8');
+  const result = await runCheck(check, root, process.env, 5_000, new Set());
+  expect([result.status, result.output]).toEqual([0, expect.any(String)]);
+  expect(readdirSync(root).toSorted()).toEqual(before);
+  expect(readFileSync(join(root, '.git/config'), 'utf8')).toBe(config);
+  expect(readFileSync(join(root, 'bun.lock'), 'utf8')).toBe(lock);
+});
+
+it.concurrent.for([
+  ['app/page.tsx', true],
+  ['a.mjs', true],
+  ['a.cjs', true],
+  ['a.jsx', true],
+  ['a.mts', true],
+  ['a.cts', true],
+  ['a.ts', true],
+  ['a.json', true],
+  ['a.md', true],
+  ['a.css', true],
+  ['package.json', true],
+  ['bun.lock', true],
+  ['Caddyfile', true],
+  ['Caddyfile.local', true],
+  ['scripts/deploy', true],
+  ['scripts/lint-shell', true],
+  ['scripts/scan-suppressions', true],
+  ['public/a.svg', false],
+  ['a.xml', false],
+  ['a.txt', false],
+  ['a.png', false],
+  ['a.woff2', false],
+  ['a.mp3', false],
+  ['.gitignore', false],
+  ['.nvmrc', false],
+  ['nested/Caddyfile', false],
+  ['nested/bun.lock', false],
+  ['other.sh', false],
+  ['out/zz.js', false],
+  ['.vscode/settings.json', false],
+  ['../outside.ts', false],
+  ['.', false],
+] as const)(
+  'reports edit coverage for %s',
+  async ([file, covered], { expect, onTestFinished }) => {
+    const root = repository(onTestFinished);
+    writeFileSync(join(root, '.gitignore'), 'out/\n.vscode/\n');
+    const path = join(root, file);
+    const report = await verify(root, [], Date.now() + 1_000, new Set(), [
+      path,
+    ]);
+    expect(report.exitCode).toBe(0);
+    expect(
+      report.stdout.includes(
+        `agent-verify: not verified: ${path} (no check reads this file)\n`,
+      ),
+    ).toBe(!covered);
+  },
+);
+
+it.concurrent('classifies symlink targets and retains the original unsupported argument', async ({
+  expect,
+  onTestFinished,
+}) => {
+  const root = repository(onTestFinished);
+  mkdirSync(join(root, 'scripts'));
+  mkdirSync(join(root, '.githooks'));
+  mkdirSync(join(root, 'out'));
+  writeFileSync(join(root, '.gitignore'), 'out/\n');
+  writeFileSync(join(root, 'scripts/pre-push.ts'), 'export {};\n');
+  writeFileSync(join(root, 'asset.svg'), '<svg/>');
+  symlinkSync('../scripts/pre-push.ts', join(root, '.githooks/pre-push'));
+  symlinkSync('asset.svg', join(root, 'misleading.ts'));
+  symlinkSync('../scripts/pre-push.ts', join(root, 'out/ignored.ts'));
+  const report = await verify(root, [], Date.now() + 1_000, new Set(), [
+    join(root, '.githooks/pre-push'),
+    `${root}/./misleading.ts`,
+    join(root, 'out/ignored.ts'),
+  ]);
+  expect(report.exitCode).toBe(0);
+  expect(
+    report.stdout.split('\n').filter((line) => line.includes('not verified')),
+  ).toEqual([
+    `agent-verify: not verified: ${root}/./misleading.ts (no check reads this file)`,
+    `agent-verify: not verified: ${root}/out/ignored.ts (no check reads this file)`,
+  ]);
+});
+
+it.concurrent('resolves a symlink before a following parent segment', async ({
+  expect,
+  onTestFinished,
+}) => {
+  const root = repository(onTestFinished);
+  mkdirSync(join(root, 'deep/nested'), { recursive: true });
+  writeFileSync(join(root, 'deep/Caddyfile'), 'nested');
+  writeFileSync(join(root, 'Caddyfile'), 'root');
+  symlinkSync('deep/nested', join(root, 'link'));
+  const report = await verify(root, [], Date.now() + 1_000, new Set(), [
+    `${root}/link/../Caddyfile`,
+  ]);
+  expect(report.stdout).toContain(
+    `agent-verify: not verified: ${root}/link/../Caddyfile (no check reads this file)\n`,
+  );
+});
+
+it.concurrent('scans the whole checkout from a nested working directory', async ({
+  expect,
+  onTestFinished,
+}) => {
+  const root = repository(onTestFinished);
+  const nested = join(root, 'nested');
+  mkdirSync(nested);
+  writeFileSync(join(root, 'root.test.ts'), ['it', 'skip'].join('.') + '(');
+  const result = await runCheck(
+    EDIT_CHECKS[0],
+    nested,
+    process.env,
+    1_000,
+    new Set(),
+  );
+  expect(result.status).toBe(1);
+  expect(result.output).toContain('root.test.ts:1:');
 });

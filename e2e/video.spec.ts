@@ -1,5 +1,5 @@
-import { expect, test, type Page } from '@playwright/test';
-import { blockExternal, untilHydrated } from './helpers';
+import { expect, type Page } from '@playwright/test';
+import { test, untilHydrated } from './helpers';
 
 const IFRAME_API = 'https://www.youtube.com/iframe_api';
 const FAKE_IFRAME_API = `
@@ -42,8 +42,6 @@ const playerCalls = (page: Page) =>
   page.evaluate(() => window.fakePlayer?.calls);
 
 const POSTER = 'https://i.ytimg.com/vi_webp/AA3ixfYtq1g/maxresdefault.webp';
-
-test.beforeEach(blockExternal);
 
 test('background video shows its still frame from the first render and loads the player without blocking rendering', async ({
   page,
@@ -170,24 +168,17 @@ test('keyboard focus skips the background video player', async ({ page }) => {
   ).toBeFocused();
 });
 
-test('background video shows its still frame without JavaScript', async ({
-  browser,
-  baseURL,
-}) => {
-  const context = await browser.newContext({
-    baseURL,
-    javaScriptEnabled: false,
-  });
-  try {
-    const page = await context.newPage();
-    await blockExternal({ page, baseURL });
+test.describe(() => {
+  test.use({ javaScriptEnabled: false });
+
+  test('background video shows its still frame without JavaScript', async ({
+    page,
+  }) => {
     await page.goto('/');
     await expect(
       page.locator('body > div[aria-hidden] > div').first(),
     ).toHaveCSS('background-image', `url("${POSTER}")`);
-  } finally {
-    await context.close();
-  }
+  });
 });
 
 test('background video pauses while the tab is hidden and resumes when shown', async ({

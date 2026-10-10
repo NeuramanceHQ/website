@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-site=/srv/neuramance
+site=${NEURAMANCE_SITE:-/srv/neuramance}
+caddyfile=${NEURAMANCE_CADDYFILE:-/etc/caddy/neuramance.caddy}
 repo=$(cd "$(dirname "$0")/.." && pwd)
 export NEXT_TELEMETRY_DISABLED=1
 
@@ -27,9 +28,9 @@ sha=$(timeout 30 gh api repos/NeuramanceHQ/site/git/ref/heads/main --jq .object.
 [ "$(cat "$site/failed" 2>/dev/null || true)" = "$sha" ] && exit 0
 timeout 30 git -C "$repo" cat-file -e "$sha^{commit}" 2>/dev/null || timeout 60 git -C "$repo" fetch --quiet origin main
 timeout 60 git -C "$repo" checkout --quiet --detach "$sha"
-if ! timeout 30 git -C "$repo" show "$sha:Caddyfile" | cmp -s - /etc/caddy/neuramance.caddy; then
+if ! timeout 30 git -C "$repo" show "$sha:Caddyfile" | cmp -s - "$caddyfile"; then
     if [ "$(cat "$site/waiting" 2>/dev/null || true)" != "$sha" ]; then
-        echo "$sha: Caddyfile differs from /etc/caddy/neuramance.caddy; install it with sudo" >&2
+        echo "$sha: Caddyfile differs from $caddyfile; install it with sudo" >&2
         report pending "Waiting for the new Caddyfile to be installed with sudo"
         echo "$sha" > "$site/waiting"
     fi
@@ -41,8 +42,15 @@ if [ ! -d "$site/releases/$sha" ]; then
     trap 'rm -rf "$build"' EXIT
     report pending "Building on i9"
     timeout 120 git -C "$repo" archive "$sha" | tar -x -C "$build" || fail "could not extract the commit"
-    (cd "$build" && timeout 300 bun install --frozen-lockfile </dev/null && timeout 900 bun run build </dev/null) \
-        || fail "build failed"
+    (
+        cd "$build" || exit 1
+        for attempt in 1 2 3; do
+            timeout 300 bun install --frozen-lockfile </dev/null && break
+            [ "$attempt" -lt 3 ] || exit 1
+            timeout 30 sleep "${NEURAMANCE_INSTALL_RETRY_DELAY:-$((attempt * 10 - 5))}" || exit 1
+        done
+        timeout 900 bun run build </dev/null
+    ) || fail "build failed"
     mkdir -p "$site/releases"
     mv "$build/out" "$site/releases/$sha"
 fi

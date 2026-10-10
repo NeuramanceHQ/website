@@ -4,7 +4,12 @@ import type { ESTree, Scope, Variable } from '@oxlint/plugins';
 type Definition = Variable['defs'][number];
 
 const ASSERTION_MODULES = new Set(['vitest', '@playwright/test']);
-const EQUALITY_MATCHERS = new Set(['toBe', 'toEqual', 'toStrictEqual']);
+const EQUALITY_MATCHERS = new Set([
+  'toBe',
+  'toEqual',
+  'toStrictEqual',
+  'toMatchObject',
+]);
 
 function variableNamed(
   scope: Scope | null,
@@ -55,7 +60,7 @@ function importsNamespace(definition: Definition): boolean {
   );
 }
 
-function isNamespaceExpect(base: ESTree.Expression, scope: Scope): boolean {
+function isMemberExpect(base: ESTree.Expression, scope: Scope): boolean {
   if (
     base.type !== 'MemberExpression' ||
     base.computed ||
@@ -63,12 +68,15 @@ function isNamespaceExpect(base: ESTree.Expression, scope: Scope): boolean {
   ) {
     return false;
   }
-  const namespace = variableNamed(scope, base.object.name);
+  const variable = variableNamed(scope, base.object.name);
   return (
     base.property.type === 'Identifier' &&
     base.property.name === 'expect' &&
-    namespace !== undefined &&
-    namespace.defs.some(importsNamespace)
+    variable !== undefined &&
+    variable.defs.some(
+      (definition) =>
+        definition.type === 'Parameter' || importsNamespace(definition),
+    )
   );
 }
 
@@ -81,7 +89,7 @@ function isAssertionExpect(call: ESTree.CallExpression, scope: Scope): boolean {
     callee.property.name === 'soft';
   const base = soft ? callee.object : callee;
   if (base.type !== 'Identifier') {
-    return isNamespaceExpect(base, scope);
+    return isMemberExpect(base, scope);
   }
   const variable = variableNamed(scope, base.name);
   return variable

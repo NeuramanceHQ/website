@@ -130,12 +130,14 @@ it.concurrent('resolves patch paths from the directory Codex runs in', (context)
   context.expect(gated(root)).toEqual([page]);
 });
 
-it.concurrent('leaves deletion-only repositories to the turn-end gate', (context) => {
+it.concurrent.for([
+  'Delete File: removed/deep/gone.ts',
+  'Add File: missing.ts',
+  'Add File: package.json/x.ts',
+])('leaves %s to the turn-end gate', (header, context) => {
   const { root } = fixture(context.onTestFinished);
-  const result = hook(
-    root,
-    event(root, '*** Delete File: removed/deep/gone.ts\n'),
-  );
+  writeFileSync(join(root, 'package.json'), '{}\n');
+  const result = hook(root, event(root, `*** ${header}\n`));
   context.expect(result).toMatchObject({ status: 0, stderr: '' });
   context.expect(existsSync(join(root, 'gate-calls'))).toBe(false);
   context.expect(JSON.parse(result.stdout)).toEqual({
@@ -473,4 +475,22 @@ it.concurrent('keeps verifying later repositories after a gate fails', (context)
   context.expect(result.stderr).toContain(root);
   context.expect(result.stderr).toContain('FAIL [lint] planted failure');
   context.expect(gated(other)).toEqual([join(other, 'last.ts')]);
+});
+
+it.concurrent('surfaces each unverified edit from a successful gate', (context) => {
+  const { root } = fixture(context.onTestFinished);
+  touch(join(root, 'asset.svg'));
+  const notices = ['asset.svg', 'sound.mp3'].map(
+    (path) => `agent-verify: not verified: ${path} (no check reads this file)`,
+  );
+  writeFileSync(
+    join(root, 'scripts/agent-verify'),
+    `#!/bin/sh\nprintf '%s\\n' 'passed' '${notices[0]}' '${notices[1]}'\n`,
+  );
+  const result = hook(root, event(root, '*** Update File: asset.svg\n'));
+  context.expect(result.status).toBe(0);
+  context.expect(result.stderr).toBe('');
+  context
+    .expect(result.stdout)
+    .toBe(JSON.stringify({ systemMessage: notices.join('\n') }) + '\n');
 });

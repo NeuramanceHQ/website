@@ -265,6 +265,38 @@
           }
         ]
       }
+    },
+    {
+      "files": ["e2e/*.spec.ts"],
+      "rules": {
+        "no-restricted-imports": [
+          "error",
+          {
+            "patterns": [
+              {
+                "group": [
+                  "@/app",
+                  "@/app/**",
+                  "@/components",
+                  "@/components/**",
+                  "@/lib",
+                  "@/lib/**",
+                  "@/scripts",
+                  "@/scripts/**"
+                ],
+                "message": "e2e tests drive the built site through the browser; check behavior there instead of importing its code."
+              }
+            ],
+            "paths": [
+              {
+                "name": "@playwright/test",
+                "importNames": ["test"],
+                "message": "Import test from ./helpers, which blocks external requests and fails on Content-Security-Policy violations."
+              }
+            ]
+          }
+        ]
+      }
     }
   ]
 }

@@ -1,5 +1,5 @@
-import { expect, test, type Locator, type Page } from '@playwright/test';
-import { blockExternal } from './helpers';
+import { expect, type Locator, type Page } from '@playwright/test';
+import { test } from './helpers';
 
 const marqueeLists = (page: Page) =>
   page
@@ -11,8 +11,6 @@ const translateX = (list: Locator) =>
   list.evaluate(
     (element) => new DOMMatrix(getComputedStyle(element).transform).m41,
   );
-
-test.beforeEach(blockExternal);
 
 test('facts marquee loops two equal copies endlessly and pauses on demand', async ({
   page,

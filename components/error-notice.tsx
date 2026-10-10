@@ -1,8 +1,9 @@
 import * as stylex from '@stylexjs/stylex';
-import { panel } from '@/components/styles';
+import { button, panel } from '@/components/styles';
+import { EMAIL } from '@/lib/site';
 import { colors } from '@/lib/tokens.stylex';
 
-export function ErrorNotice() {
+export function ErrorNotice({ retry }: { retry?: () => void }) {
   return (
     <main {...stylex.props(panel.page)}>
       <section {...stylex.props(panel.card)}>
@@ -14,8 +15,21 @@ export function ErrorNotice() {
         <p {...stylex.props(panel.body)}>
           Please try whatever you were doing again.
         </p>
+        {retry && (
+          <button
+            type="button"
+            onClick={retry}
+            {...stylex.props(button.base, button.ghost, button.small)}
+          >
+            Try again
+          </button>
+        )}
         <p {...stylex.props(panel.body)}>
-          If you continue to see this error, please reach out to us.
+          If you continue to see this error, please{' '}
+          <a href={`mailto:${EMAIL}`} {...stylex.props(styles.contact)}>
+            reach out to us
+          </a>
+          .
         </p>
       </section>
     </main>
@@ -28,5 +42,9 @@ const styles = stylex.create({
     height: 6,
     borderRadius: '50%',
     backgroundColor: colors.signal,
+  },
+  contact: {
+    textDecorationLine: 'underline',
+    textUnderlineOffset: '0.2em',
   },
 });

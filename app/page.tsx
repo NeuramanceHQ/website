@@ -1,11 +1,10 @@
 import * as stylex from '@stylexjs/stylex';
 import { ArrowRight, Copy } from 'lucide-react';
 import type { Metadata } from 'next';
-import Link from 'next/link';
 import { CopyButton } from '@/components/copy-button';
 import { Hero } from '@/components/hero';
 import { button, frame, tag, text } from '@/components/styles';
-import { ACCESS_HREF, AGENT_PROMPT, OPEN_GRAPH } from '@/lib/site';
+import { ACCESS_HREF, AGENT_PROMPT, LLMS_HREF, OPEN_GRAPH } from '@/lib/site';
 import { colors, fonts } from '@/lib/tokens.stylex';
 
 const STEPS = [
@@ -128,10 +127,10 @@ function ForAgents() {
           It reads the guide, then drafts an access request describing the parts
           your project needs.
         </p>
-        <Link href="/llms.txt" prefetch={false} {...stylex.props(styles.more)}>
+        <a href={LLMS_HREF} {...stylex.props(styles.more)}>
           Read llms.txt
           <ArrowRight aria-hidden {...stylex.props(button.icon)} />
-        </Link>
+        </a>
       </div>
       <div {...stylex.props(styles.prompt)}>
         <div {...stylex.props(styles.promptHead)}>
